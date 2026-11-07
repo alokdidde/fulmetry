@@ -1,0 +1,54 @@
+diff --git a/WickedEngine/wiRenderer.cpp b/WickedEngine/wiRenderer.cpp
+index 8e0c286..92d5fc2 100644
+--- a/WickedEngine/wiRenderer.cpp
++++ b/WickedEngine/wiRenderer.cpp
+@@ -363,6 +363,13 @@ union ObjectRenderingVariant
+ 	uint32_t value;
+ };
+ static_assert(sizeof(ObjectRenderingVariant) == sizeof(uint32_t));
++// Fulmetry patch: WICKED_LAZY_OBJECT_PSO defers object pipeline compilation to first use. Eagerly compiling
++// every object PSO permutation needs >16 GB on lavapipe (software Vulkan).
++#ifdef WICKED_LAZY_OBJECT_PSO
++#define WI_OBJECT_PSO_RENDERPASS_INFO(x) nullptr
++#else
++#define WI_OBJECT_PSO_RENDERPASS_INFO(x) (x)
++#endif
+ inline PipelineState* GetObjectPSO(ObjectRenderingVariant variant)
+ {
+ 	static wi::unordered_map<uint32_t, PipelineState> PSO_object[RENDERPASS_COUNT][MaterialComponent::SHADERTYPE_COUNT][OBJECT_MESH_SHADER_PSO_COUNT];
+@@ -2156,7 +2163,7 @@ void LoadShaders()
+ 											variant.bits.sample_count = msaa;
+ 											renderpass_info.sample_count = msaa;
+ 											PipelineState pso;
+-											device->CreatePipelineState(&desc, &pso, &renderpass_info);
++											device->CreatePipelineState(&desc, &pso, WI_OBJECT_PSO_RENDERPASS_INFO(&renderpass_info));
+ 											wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+ 												*GetObjectPSO(variant) = pso;
+ 												});
+@@ -2181,7 +2188,7 @@ void LoadShaders()
+ 											variant.bits.sample_count = msaa;
+ 											renderpass_info.sample_count = msaa;
+ 											PipelineState pso;
+-											device->CreatePipelineState(&desc, &pso, &renderpass_info);
++											device->CreatePipelineState(&desc, &pso, WI_OBJECT_PSO_RENDERPASS_INFO(&renderpass_info));
+ 											wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+ 												*GetObjectPSO(variant) = pso;
+ 												});
+@@ -2196,7 +2203,7 @@ void LoadShaders()
+ 										renderpass_info.rt_formats[0] = format_rendertarget_shadowmap;
+ 										renderpass_info.ds_format = format_depthbuffer_shadowmap;
+ 										PipelineState pso;
+-										device->CreatePipelineState(&desc, &pso, &renderpass_info);
++										device->CreatePipelineState(&desc, &pso, WI_OBJECT_PSO_RENDERPASS_INFO(&renderpass_info));
+ 										wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+ 											*GetObjectPSO(variant) = pso;
+ 											});
+@@ -2210,7 +2217,7 @@ void LoadShaders()
+ 										renderpass_info.rt_formats[0] = format_rendertarget_shadowmap; // Note: crash on Apple when rendertarget format is not set while renderpass has rendertarget (even though we do't use pixel shader for these)
+ 										renderpass_info.ds_format = format_depthbuffer_shadowmap;
+ 										PipelineState pso;
+-										device->CreatePipelineState(&desc, &pso, &renderpass_info);
++										device->CreatePipelineState(&desc, &pso, WI_OBJECT_PSO_RENDERPASS_INFO(&renderpass_info));
+ 										wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+ 											*GetObjectPSO(variant) = pso;
+ 											});
