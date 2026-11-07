@@ -1,11 +1,13 @@
 name: release
 
-# The downloadable app. A pushed tag v* builds Fulmetry.app for Apple silicon and the Linux x86_64 tarball and
-# attaches both to a GitHub release of that tag. A pull request that touches the packaging builds them too (as
-# workflow artifacts, nothing is released), and so does a manual run.
+# The downloadable app. Every merge to main (docs-only ones aside) builds Fulmetry.app for Apple silicon and the
+# Linux x86_64 tarball and publishes both as a GitHub release, v0.1.<run number>, tagged at the merged commit.
+# A pull request that touches the packaging builds them too, as workflow artifacts: nothing is released.
+# A manual run on main releases like a merge; on another branch it only builds.
 on:
   push:
-    tags: ["v*"]
+    branches: [main]
+    paths-ignore: ["docs/**", "**/*.md"]
   pull_request:
     paths:
       - ".github/workflows/release.yml"
@@ -20,6 +22,11 @@ on:
 permissions:
   contents: read
 
+# One build per branch at a time; on main, releases go out in merge order.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   macos:
     name: Fulmetry.app (macOS, Apple silicon)
@@ -30,7 +37,8 @@ jobs:
       - name: Version
         id: v
         run: |
-          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then echo "version=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          if [[ "$GITHUB_REF" == refs/heads/main && "$GITHUB_EVENT_NAME" != pull_request ]]; then
+            echo "version=v0.1.${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
           else echo "version=v0.0.0-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"; fi
       - name: Install
         run: brew install molten-vk ninja
@@ -97,7 +105,8 @@ jobs:
       - name: Version
         id: v
         run: |
-          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then echo "version=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          if [[ "$GITHUB_REF" == refs/heads/main && "$GITHUB_EVENT_NAME" != pull_request ]]; then
+            echo "version=v0.1.${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
           else echo "version=v0.0.0-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"; fi
       - name: Install
         run: |
@@ -144,7 +153,7 @@ jobs:
 
   release:
     name: GitHub release
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     needs: [macos, linux]
     runs-on: ubuntu-24.04
     permissions:
@@ -160,5 +169,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" dist/* --title "Fulmetry $GITHUB_REF_NAME" \
+          tag="v0.1.${GITHUB_RUN_NUMBER}"
+          gh release create "$tag" dist/* --target "$GITHUB_SHA" --title "Fulmetry $tag" \
             --notes-file tools/package/RELEASE_NOTES.md --prerelease
