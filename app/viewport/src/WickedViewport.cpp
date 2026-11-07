@@ -210,7 +210,7 @@ struct WickedViewport::Impl {
     std::optional<Aabb> visibleBounds() const {
         std::optional<Aabb> all;
         for (const Part* p : project.allParts()) {
-            if (!visible(p->id)) continue;
+            if (!visible(p->id) || !mesh(p->id)) continue;
             Aabb b = drawnBounds(p->id);
             if (!all) { all = b; continue; }
             all->min = {std::min(all->min.x, b.min.x), std::min(all->min.y, b.min.y), std::min(all->min.z, b.min.z)};
@@ -244,7 +244,7 @@ struct WickedViewport::Impl {
         if (!b) return;
         std::vector<Vec3> pts;
         for (const Part* p : project.allParts()) {
-            if (!visible(p->id)) continue;
+            if (!visible(p->id) || !mesh(p->id)) continue;
             Aabb d = drawnBounds(p->id);
             for (int i = 0; i < 8; ++i)
                 pts.push_back({(i & 1) ? d.max.x : d.min.x, (i & 2) ? d.max.y : d.min.y, (i & 4) ? d.max.z : d.min.z});
@@ -290,8 +290,12 @@ struct WickedViewport::Impl {
                     ++meshFiles;
                     continue;
                 }
-                warnings.push_back(p->id.value + ": " + m.error().message + "; drawing its bounds");
+                warnings.push_back(p->id.value + ": " + m.error().message +
+                                   (p->kind == PartKind::Hardware ? "; not drawn" : "; drawing its bounds"));
             }
+            // A hardware part (screws, inserts) is spread over the assembly: its bounds box would cover the
+            // whole object. Without its mesh it is not drawn (and so not pickable).
+            if (p->kind == PartKind::Hardware) continue;
             meshes[p->id] = std::make_shared<const MeshAsset>(boxMesh(p->bounds));
         }
     }
@@ -339,6 +343,7 @@ struct WickedViewport::Impl {
         }
 
         for (const Part* p : project.allParts()) {
+            if (!mesh(p->id)) continue;  // hardware without a mesh
             const MeshAsset& a = *mesh(p->id);
             PartEntity pe;
             pe.object = s.Entity_CreateObject(p->id.value);
@@ -371,7 +376,9 @@ struct WickedViewport::Impl {
     void syncScene() {
         auto& s = *scene;
         for (const Part* p : project.allParts()) {
-            const PartEntity& pe = entities[p->id];
+            auto ent = entities.find(p->id);
+            if (ent == entities.end()) continue;
+            const PartEntity& pe = ent->second;
             Transform tr = placement(p->id);
             if (auto* t = s.transforms.GetComponent(pe.object)) {
                 t->ClearTransform();
