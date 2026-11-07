@@ -1,7 +1,10 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "method": "sim.exportMjcf",
+  "description": "Generates the MuJoCo model (MJCF XML) of one object from its assembly, for the app's live simulation.",
   "since": "M4",
+  "timeoutMs": 120000,
+  "readOnly": true,
   "params": {
     "type": "object",
     "required": [
@@ -11,10 +14,12 @@
     "additionalProperties": false,
     "properties": {
       "projectRoot": {
-        "type": "string"
+        "type": "string",
+        "description": "Absolute path of the project root: the folder that holds fulmetry.project.json"
       },
       "object": {
-        "type": "string"
+        "type": "string",
+        "description": "Object id, e.g. obj:rover"
       }
     }
   },

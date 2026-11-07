@@ -33,6 +33,12 @@ TEST_CASE("FakeAgentClient conformance") {
     conformance::agentClientConformance([p] { return std::make_unique<fakes::FakeAgentClient>(p); }, "fake://local", p);
 }
 
+TEST_CASE("FakeAgentClient approval conformance") {
+    Project p = test::rover();
+    conformance::agentApprovalConformance([p] { return std::make_unique<fakes::FakeAgentClient>(p, true); },
+                                          "fake://local", p);
+}
+
 TEST_CASE("agents are named after their task") {
     CHECK(fakes::FakeAgentClient::nameFor("It has to drive on the rug… make the wheels bigger with more grip") ==
           "Make the wheels bigger");

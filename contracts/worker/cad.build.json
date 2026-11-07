@@ -1,7 +1,10 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "method": "cad.build",
+  "description": "Builds one part from its build123d source (<projectRoot>/cad/<object>/<slug>.py) to STEP and glTF under <projectRoot>/.fulmetry/build/, and returns the files, the source hash and the bounds. Cached by source hash: an unchanged part answers at once with cached true.",
   "since": "M2",
+  "timeoutMs": 300000,
+  "readOnly": false,
   "params": {
     "type": "object",
     "required": [
@@ -11,10 +14,16 @@
     "additionalProperties": false,
     "properties": {
       "projectRoot": {
-        "type": "string"
+        "type": "string",
+        "description": "Absolute path of the project root: the folder that holds fulmetry.project.json"
       },
       "part": {
-        "type": "string"
+        "type": "string",
+        "description": "Part id, part:<object>/<slug>, e.g. part:rover/wheel-l"
+      },
+      "params": {
+        "type": "object",
+        "description": "Overrides merged over the source's PARAMS for this build; they are part of sourceHash"
       }
     }
   },
@@ -56,6 +65,10 @@
             "maxItems": 3
           }
         }
+      },
+      "cached": {
+        "type": "boolean",
+        "description": "True when nothing was rebuilt because the outputs for this sourceHash already existed"
       }
     }
   }

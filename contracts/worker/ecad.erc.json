@@ -1,7 +1,10 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "method": "ecad.erc",
+  "description": "Runs KiCad's electrical rules check on a board's schematic and returns the error and warning counts with each violation.",
   "since": "M4",
+  "timeoutMs": 120000,
+  "readOnly": true,
   "params": {
     "type": "object",
     "required": [
@@ -11,10 +14,12 @@
     "additionalProperties": false,
     "properties": {
       "projectRoot": {
-        "type": "string"
+        "type": "string",
+        "description": "Absolute path of the project root: the folder that holds fulmetry.project.json"
       },
       "board": {
-        "type": "string"
+        "type": "string",
+        "description": "Board part id, e.g. part:rover/main-board"
       }
     }
   },

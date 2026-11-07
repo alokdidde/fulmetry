@@ -35,6 +35,9 @@ struct Part {
     Aabb bounds;                // mm, local frame; used by fakes and as a sanity check
     std::string stepFile;       // relative to the project root, may be empty
     std::string meshFile;       // glTF, relative to the project root, may be empty
+    // Hash of the part's CAD source as last built ("sha256:<hex>" from the worker's cad.build), or empty when
+    // never built. Checks compare it with Check::inputHashes to know whether they are stale.
+    std::string sourceHash;
     std::optional<Joint> joint; // set when the part moves relative to its parent
     double costUsd = 0;
     double massG = 0;

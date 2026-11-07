@@ -11,6 +11,6 @@ that update the schema or header, its fake, and its conformance test together.
 | Simulation | `app/core/.../ISimulation.h` | `app/tests/conformance/SimulationConformance.h` |
 | App events | `app/core/.../Events.h` | `app/tests/unit/test_events.cpp` |
 | Agent wire | `agent/fulmetry-ext.schema.json` + T3 Code `packages/contracts` | `app/tests/conformance/AgentClientConformance.h` |
-| Worker RPC | `worker/<method>.json` (JSON-RPC 2.0) | `worker/tests/test_contracts.py` |
+| Worker RPC | `worker/<method>.json` (JSON-RPC 2.0), shaped by `schemas/worker-method.schema.json` | `worker/tests/test_contracts.py` |
 
 Version: `fulmetry::kContractsVersion` in `app/core/include/fulmetry/core/Version.h`. Bump on breaking changes.
