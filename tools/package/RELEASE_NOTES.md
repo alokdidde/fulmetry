@@ -3,7 +3,10 @@ and x-ray, the harness onboarding, and Simulate (the living-room drive test on M
 
 The project chat runs on a stand-in agent for now: it answers, but it does not change the project yet.
 
-## macOS (Apple silicon, macOS 15 or later)
+## macOS (Apple silicon)
+
+The live 3D stage and Simulate need macOS 26 (Tahoe) or later: the renderer uses Metal 4. On macOS 15 the app runs
+with a still picture of the rover in place of the live stage.
 
 1. Download `Fulmetry-<version>-macos-arm64.zip` and unzip it.
 2. Move `Fulmetry.app` to Applications.

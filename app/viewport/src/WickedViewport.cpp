@@ -108,6 +108,17 @@ private:
         if (const char* env = std::getenv("FULMETRY_WICKED_THREADS")) wi::jobsystem::Initialize(uint32_t(std::atoi(env)));
         // nullptr window: no surface, no swapchain. Everything renders to our own textures.
 #if defined(__APPLE__)
+        // Wicked's Metal backend needs Metal 4 (macOS 26 on an Apple GPU) and quits the process without it: check
+        // first, so the app can fall back to its still stage.
+        {
+            MTL::Device* probe = MTL::CreateSystemDefaultDevice();
+            const bool metal4 = probe != nullptr && probe->supportsFamily(MTL::GPUFamilyMetal4);
+            if (probe) probe->release();
+            if (!metal4) {
+                error = "this Mac has no Metal 4 GPU (the live stage needs macOS 26 on Apple silicon)";
+                return;
+            }
+        }
         device = std::make_unique<wi::graphics::GraphicsDevice_Metal>(wi::graphics::ValidationMode::Disabled);
 #else
         device = std::make_unique<wi::graphics::GraphicsDevice_Vulkan>(nullptr, wi::graphics::ValidationMode::Disabled);

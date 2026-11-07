@@ -278,15 +278,16 @@ int main(int argc, char** argv) {
         wo.assetRoot = std::filesystem::absolute(o.project).parent_path().string();  // meshFile paths
         auto wicked = std::make_unique<viewport::WickedViewport>(wo);
         if (auto st = wicked->loadProject(project.value()); !st.ok()) {
-            std::fprintf(stderr, "stage: %s\n", st.error().message.c_str());
-            return 1;
+            // No GPU the engine can use: the still stage, so the rest of the workbench still works.
+            std::printf("stage: still image, the live stage cannot start: %s\n", st.error().message.c_str());
+        } else {
+            for (const auto& w : wicked->meshWarnings()) std::fprintf(stderr, "stage: %s\n", w.c_str());
+            std::printf("stage: Wicked, %d parts drawn from meshes\n", wicked->meshFileCount());
+            lo.idleFrames = wo.frames;
+            lo.setFrames = [v = wicked.get()](int n) { v->setSoftShadowFrames(n); };
+            lo.setFraming = [v = wicked.get()](double l, double t, double r, double b) { v->setFramingRect(l, t, r, b); };
+            viewport = std::move(wicked);
         }
-        for (const auto& w : wicked->meshWarnings()) std::fprintf(stderr, "stage: %s\n", w.c_str());
-        std::printf("stage: Wicked, %d parts drawn from meshes\n", wicked->meshFileCount());
-        lo.idleFrames = wo.frames;
-        lo.setFrames = [v = wicked.get()](int n) { v->setSoftShadowFrames(n); };
-        lo.setFraming = [v = wicked.get()](double l, double t, double r, double b) { v->setFramingRect(l, t, r, b); };
-        viewport = std::move(wicked);
     }
 #endif
 

@@ -72,14 +72,15 @@ jobs:
         run: cmake --build --preset release
       - name: GPU
         run: system_profiler SPDisplaysDataType | head -20
-      - name: Smoke run (Metal stage, null window)
+      - name: Smoke run (null window)
         timeout-minutes: 25
-        # The live stage renders the rover on the runner's Metal device and Simulate drives it on MuJoCo; the UI
-        # runs on Raven's null backend.
+        # The UI runs on Raven's null backend. Wicked's Metal backend needs Metal 4, which the hosted runners' virtual
+        # GPU lacks, so here the app takes its still-stage fallback; on a Metal 4 Mac the live stage and Simulate run.
         run: |
           build/release/app/ui/fulmetry_workbench --headless --strict --frames 30 --simulate --sim-seconds 3 | tee smoke.log
-          grep -q "stage: Wicked" smoke.log
-          grep -q "simulate: t 3.00 s" smoke.log
+          grep -q "workbench ready" smoke.log
+          grep -Eq "stage: (Wicked|still image)" smoke.log
+          if grep -q "stage: Wicked" smoke.log; then grep -q "simulate: t 3.00 s" smoke.log; fi
       - name: Package
         run: tools/package/macos.sh build/release dist "${{ steps.v.outputs.version }}"
       - name: Screenshot of the packaged app
