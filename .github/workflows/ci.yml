@@ -315,6 +315,9 @@ jobs:
         # Five 1440 x 900 screenshots of the live stage, then X11 drags, a click that selects the camera head and
         # a wheel zoom; fails when the selection or the camera does not follow.
         run: app/ui/tests/m1_shots.sh build/ci-m1/app/ui/fulmetry_workbench build/ci-m1/m1-shots
+      - name: Harness onboarding and picker (Xvfb + lavapipe)
+        # Seven screenshots of the onboarding screen's states and the picker, then a real click on the harness chip.
+        run: app/ui/tests/harness_shots.sh build/ci-m1/app/ui/fulmetry_workbench build/ci-m1/m1-shots/harnesses
       - name: Save shader cache
         if: always() && steps.test.outcome == 'success' && steps.shader-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4

@@ -122,9 +122,11 @@ TEST_CASE("workbench model: sending a message starts an agent whose card follows
     m.selectPart(PartId("part:rover/wheel-l"));
     fakes::FakeAgentClient agent(m.project());
     REQUIRE(agent.connect("fake://").ok());
+    m.setHarnesses(agent.harnesses());
     auto req = m.compose("  Make the wheels 70 mm", "11:00");
     REQUIRE(req.ok());
     CHECK(req->part->value == "part:rover/wheel-l");
+    CHECK(req->provider == "claudeAgent");
     CHECK(m.chat().back().author == "You");
     CHECK(m.chat().back().chips.size() == 1);
     REQUIRE(agent.sendChat(req.value()).ok());
@@ -140,10 +142,48 @@ TEST_CASE("workbench model: sending a message starts an agent whose card follows
             sawCard = true;
             CHECK(e.card->done);
             CHECK(e.card->status == "Done");
+            CHECK(e.card->harness == "Claude Code \xC2\xB7 Opus 5.5");
         }
         if (e.kind == ChatEntry::Kind::Divider && e.text == "Revision r4 saved") sawDivider = true;
     }
     CHECK(sawCard);
     CHECK(sawDivider);
     CHECK_FALSE(m.compose("   ", "11:01").ok());
+}
+
+TEST_CASE("workbench model: the harness choice follows what is ready") {
+    WorkbenchModel m(rover());
+    fakes::FakeAgentClient fresh(m.project(), false, fakes::FakeAgentClient::Harnesses::Fresh);
+    m.setHarnesses(fresh.harnesses());
+    CHECK(m.needsOnboarding());
+    CHECK(m.choice().harness.empty());
+    CHECK(m.choiceLabel() == "No harness connected");
+    const size_t before = m.chat().size();
+    auto refused = m.compose("hello", "09:00");
+    REQUIRE_FALSE(refused.ok());
+    CHECK(refused.error().code == "no_harness");
+    CHECK(m.chat().size() == before);  // nothing was added
+    CHECK_FALSE(m.choose("codex"));    // not ready
+
+    fakes::FakeAgentClient all(m.project(), false, fakes::FakeAgentClient::Harnesses::All);
+    m.setHarnesses(all.harnesses());
+    CHECK_FALSE(m.needsOnboarding());
+    CHECK(m.choice().harness == "raven");  // nothing chosen: the first ready one
+    REQUIRE(m.choose("codex", "gpt-6-luna"));
+    CHECK(m.choice() == HarnessChoice{"codex", "gpt-6-luna"});
+    CHECK(m.choiceLabel() == "Codex \xC2\xB7 GPT-6 Luna");
+    CHECK_FALSE(m.choose("codex", "no-such-model"));
+    CHECK(m.choice().model == "gpt-6-luna");
+    auto req = m.compose("hello", "09:01");
+    REQUIRE(req.ok());
+    CHECK(req->provider == "codex");
+    CHECK(req->model == "gpt-6-luna");
+
+    // Codex signs out: new work falls back to a ready harness, and the choice comes back when Codex does.
+    REQUIRE(all.signOutHarness("codex").ok());
+    m.setHarnesses(all.harnesses());
+    CHECK(m.choice().harness == "raven");
+    CHECK(m.preferredChoice().harness == "codex");
+    m.setHarnesses(fakes::FakeAgentClient(m.project(), false, fakes::FakeAgentClient::Harnesses::All).harnesses());
+    CHECK(m.choice() == HarnessChoice{"codex", "gpt-6-luna"});
 }

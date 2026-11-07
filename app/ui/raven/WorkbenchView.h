@@ -64,6 +64,14 @@ public:
     void setTrayOpen(bool open);
     void setMenuOpen(bool open);
     void send();
+    // Harnesses: the onboarding screen (connect, install, sign in) and the picker under the composer.
+    // `select` opens the screen on that harness ("registry" for the ACP registry search).
+    void setOnboardOpen(bool open, const std::string& select = {});
+    bool onboardOpen() const { return onboardOpen_; }
+    void setPickerOpen(bool open);
+    // Runs a harness command as its button would: install:<id>, signin:<id>, answer:<id>, cancel:<id>,
+    // signout:<id>, off:<id>, on:<id>, add:<registry id>, remove:<id>, choose:<id>[/<model>]. For the shots.
+    bool harnessCommand(const std::string& command);
     // Queues work for update(): widget callbacks must not destroy the widgets they run on.
     void post(std::function<void()> fn) { queue_.push_back(std::move(fn)); }
 
@@ -79,6 +87,20 @@ private:
     void buildPin();
     void buildChat();
     void placePin();
+    void bindHarness();
+    void buildHarnessChip();
+    void buildPicker();
+    void buildOnboard();
+    void onboardRow(Rid list, const Harness& h);
+    void onboardDetail(Rid body, const Harness& h);
+    void onboardSetup(Rid body, const Harness& h);
+    void onboardRegistry(Rid body);
+    Rid monogram(Rid parent, const Harness& h, float size);
+    Rid statusPill(Rid parent, const Harness& h);
+    Rid button(Rid parent, const std::string& text, bool primary, std::function<void()> onClick,
+               const std::string& iconName = {});
+    bool runHarness(const std::string& verb, const std::string& id);
+    void report(const char* what, const std::string& id, const Status& st);
 
     Rid checkRow(Rid parent, const Check& c);
     Rid pill(Rid parent, Verdict v);
@@ -108,6 +130,15 @@ private:
     PinLocator pinLocator_;
     std::function<std::optional<Rect>()> pinAvoid_;
     std::function<void(const std::string&)> actionHandler_;
+    // harnesses
+    bool onboardOpen_ = false, pickerOpen_ = false, onboardAuto_ = true;
+    std::string onboardSel_;        // harness id, or "registry"
+    std::string registryQuery_;
+    std::vector<RegistryHarness> registryHits_;
+    std::map<std::string, Rid> credentialInputs_;  // field name -> its TextInput, for the shown sign-in prompt
+    std::map<std::string, std::string> credentialDraft_;
+    uint64_t shownHarness_ = 0;
+    std::string shownOnboardSel_;
 };
 
 }  // namespace fulmetry::ui

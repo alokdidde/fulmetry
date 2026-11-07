@@ -53,7 +53,8 @@ struct AgentCard {
     std::optional<CommentId> comment;
     std::optional<ApprovalRequest> pendingApproval;  // set while it waits for the user
     bool stopped = false;                             // with Failed: ended by IAgentClient::stopAgent
-    std::string provider;                             // "raven" or "claudeAgent"
+    std::string provider;                             // the harness running it (Harness::id)
+    std::string model;                                // its model, when the harness reports one
     std::string branch;                               // branch of its worktree
     std::string worktreePath;
     std::optional<int> revision;                      // number of the revision its work was saved as
@@ -73,8 +74,58 @@ struct ChatMessage { std::string author; std::string text; std::optional<AgentId
 struct ChatPosted { ChatMessage message; };
 struct Banner { std::string text; };
 
+// ---- Harnesses (IAgentClient::harnesses): T3 Code provider instances, as the onboarding screen shows them.
+enum class HarnessStatus {
+    Ready,         // installed, signed in, enabled
+    NeedsInstall,  // not found on this machine; canInstall says whether the app can install it
+    NeedsSignIn,
+    Checking,      // being probed, installed or signed in (setup.step says which)
+    Disabled,      // turned off by the person
+    Unavailable,   // cannot run here (unsupported version, OS); message says why
+};
+struct HarnessModel {
+    std::string id;    // "claude-opus-5-5"
+    std::string name;  // "Opus 5.5"
+};
+struct SignInField {
+    std::string name;
+    std::string label;
+    bool secret = false;
+};
+// An install or sign-in in progress (provider.install.subscribe / provider.auth.subscribe).
+struct HarnessSetup {
+    enum class Step { Idle, Installing, SigningIn, Verifying, Succeeded, Failed, Cancelled };
+    // What the person has to do: open a URL, enter a code there, fill in fields, or use a terminal.
+    enum class Prompt { None, Browser, DeviceCode, Credentials, Terminal };
+    Step step = Step::Idle;
+    double fraction = -1;  // install progress 0..1; below 0 when unknown
+    Prompt prompt = Prompt::None;
+    std::string url;       // Browser, DeviceCode
+    std::string userCode;  // DeviceCode
+    std::vector<SignInField> fields;  // Credentials
+    std::string output;               // Terminal
+    std::string message;              // progress or failure, safe to show
+};
+struct Harness {
+    std::string id;      // T3 Code provider instance id: "raven", "claudeAgent", "codex"...
+    std::string driver;  // T3 Code driver kind; several instances can share one
+    std::string name;    // "Claude Code"
+    std::string maker;   // "Anthropic"
+    std::string accent;  // "#rrggbb", empty for the default
+    HarnessStatus status = HarnessStatus::NeedsInstall;
+    std::string version;
+    std::string account;  // who it is signed in as, when it says
+    bool canInstall = false, canSignIn = false;
+    bool fromRegistry = false;  // added from the ACP registry; removeHarness takes it away
+    std::string docsUrl;
+    std::string message;  // why it is not ready
+    std::vector<HarnessModel> models;  // the first is its default
+    HarnessSetup setup;
+};
+struct HarnessesUpdated { std::vector<Harness> harnesses; };
+
 using Event = std::variant<SelectionChanged, HoverChanged, ViewModeChanged, CommentPosted, CommentUpdated,
-                           RevisionSaved, CheckUpdated, JobProgress, AgentUpdated, ChatPosted, Banner>;
+                           RevisionSaved, CheckUpdated, JobProgress, AgentUpdated, ChatPosted, Banner, HarnessesUpdated>;
 
 // Producers may publish from any thread; drain() delivers on the caller's (UI) thread, in order.
 class EventBus {
