@@ -72,6 +72,21 @@ jobs:
         run: cmake --build --preset release
       - name: GPU
         run: system_profiler SPDisplaysDataType | head -20
+      - name: Metal shaders compile
+        # The live stage compiles Wicked's shaders for Metal on first launch. The runner's GPU can't run them, but the
+        # compiler (DXC, then the Metal shader converter) runs on the CPU, so compile all of them here: one that
+        # fails crashes the stage on a Metal 4 Mac.
+        run: |
+          w="$WICKED_ROOT/WickedEngine"
+          out="$RUNNER_TEMP/shadercheck"
+          mkdir -p "$out"
+          cp "$w/libdxcompiler.dylib" "$w/libmetalirconverter.dylib" "$out/"
+          clang++ -std=gnu++20 -O1 -w -DJPH_DEBUG_RENDERER -I"$w" -I"$w/Utility/metal" "$w/offlineshadercompiler.cpp" \
+            build/release/app/viewport/wicked/xcode/Build/Products/Release/libWickedEngine_MacOS.a \
+            -framework Metal -framework MetalKit -framework MetalFX -framework QuartzCore -framework Foundation \
+            -framework AppKit -framework GameController -framework IOKit -framework CoreHaptics -framework AudioToolbox \
+            -framework CoreAudio -framework AVFoundation -framework UniformTypeIdentifiers -o "$out/offlineshadercompiler"
+          cd "$out" && ./offlineshadercompiler metal quiet
       - name: Smoke run (null window)
         timeout-minutes: 25
         # The UI runs on Raven's null backend. Wicked's Metal backend needs Metal 4, which the hosted runners' virtual
