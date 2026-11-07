@@ -27,7 +27,8 @@ jobs:
           BASE: ${{ github.base_ref }}
           # Shared by both: what the modules link or test against, the root build, the pins and this workflow.
           SHARED: '^(app/(core|project|shell|tests)/|CMakeLists\.txt$|CMakePresets\.json$|tools/(deps\.json|fetch_dep\.py|cmake/)|\.github/workflows/ci\.yml$)'
-          WICKED: '^(app/viewport/|fixtures/rover/)'
+          # The Wicked job also builds and runs the M1 workbench (Raven GUI with the live Wicked stage).
+          WICKED: '^(app/viewport/|app/ui/|fixtures/rover/)'
           RAVEN: '^app/ui/'
         run: |
           if [ "$EVENT" != "pull_request" ]; then
@@ -249,6 +250,8 @@ jobs:
     # S2's WickedViewport: Wicked Engine plus app/viewport/wicked/patches, rendered headless on Mesa lavapipe.
     # Cold: ~15 min engine build and ~50 s of shader compiles. Both are cached, keyed on the pin plus the patch
     # hash, so a warm run rebuilds only our own sources.
+    # Preset ci-m1 = ci-wicked plus Raven GUI: it also builds the M1 workbench (fulmetry_workbench with the live
+    # Wicked stage), runs every ctest, then app/ui/tests/m1_shots.sh under Xvfb and uploads the M1 screenshots.
     name: app (ubuntu-24.04, Wicked)
     needs: changes
     if: needs.changes.outputs.wicked == 'true'
@@ -261,12 +264,14 @@ jobs:
       - name: Install
         run: |
           sudo apt-get update
-          sudo apt-get install -y libsdl2-dev libvulkan-dev mesa-vulkan-drivers ninja-build
+          sudo apt-get install -y libsdl2-dev libvulkan-dev mesa-vulkan-drivers ninja-build \
+            libx11-dev xvfb xauth xdotool imagemagick
       - name: Locate dependencies
         id: dep
         run: |
           deps=$(realpath -m "$GITHUB_WORKSPACE/../deps")
           echo "WICKED_ROOT=$deps/wicked" >> "$GITHUB_ENV"
+          echo "RAVEN_GUI_ROOT=$deps/raven" >> "$GITHUB_ENV"
           echo "FULMETRY_WICKED_SHADER_CACHE=$deps/wicked-shader-cache/" >> "$GITHUB_ENV"
           echo "key=$(python3 tools/fetch_dep.py key wicked)" >> "$GITHUB_OUTPUT"
       # The checkout and the build dir are cached together: tar keeps the engine's mtimes, so Ninja rebuilds only
@@ -277,8 +282,8 @@ jobs:
         with:
           path: |
             ${{ env.WICKED_ROOT }}
-            build/ci-wicked
-          key: ${{ steps.dep.outputs.key }}-build-v1
+            build/ci-m1
+          key: ${{ steps.dep.outputs.key }}-m1-build-v1
           restore-keys: wicked-
       - name: Restore shader cache
         id: shader-cache
@@ -286,12 +291,14 @@ jobs:
         with:
           path: ${{ env.FULMETRY_WICKED_SHADER_CACHE }}
           key: ${{ steps.dep.outputs.key }}-shaders-v1
-      - name: Fetch Wicked Engine
-        run: python3 tools/fetch_dep.py fetch wicked "$WICKED_ROOT"
+      - name: Fetch Wicked Engine and Raven
+        run: |
+          python3 tools/fetch_dep.py fetch wicked "$WICKED_ROOT"
+          python3 tools/fetch_dep.py fetch raven "$RAVEN_GUI_ROOT"
       - name: Configure
-        run: cmake --preset ci-wicked
+        run: cmake --preset ci-m1
       - name: Build
-        run: cmake --build --preset ci-wicked
+        run: cmake --build --preset ci-m1
       # Saved before the tests, so a red test does not throw away a 15-minute engine build.
       - name: Save Wicked build
         if: steps.build-cache.outputs.cache-hit != 'true'
@@ -299,31 +306,45 @@ jobs:
         with:
           path: |
             ${{ env.WICKED_ROOT }}
-            build/ci-wicked
-          key: ${{ steps.dep.outputs.key }}-build-v1
+            build/ci-m1
+          key: ${{ steps.dep.outputs.key }}-m1-build-v1
       - name: Test
         id: test
-        run: ctest --preset ci-wicked
+        run: ctest --preset ci-m1
+      - name: M1 workbench (Xvfb + lavapipe)
+        # Five 1440 x 900 screenshots of the live stage, then X11 drags, a click that selects the camera head and
+        # a wheel zoom; fails when the selection or the camera does not follow.
+        run: app/ui/tests/m1_shots.sh build/ci-m1/app/ui/fulmetry_workbench build/ci-m1/m1-shots
       - name: Save shader cache
         if: always() && steps.test.outcome == 'success' && steps.shader-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
           path: ${{ env.FULMETRY_WICKED_SHADER_CACHE }}
           key: ${{ steps.dep.outputs.key }}-shaders-v1
+      - name: Upload M1 screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m1-screenshots
+          path: build/ci-m1/m1-shots/
+          if-no-files-found: ignore
+          retention-days: 30
       - name: Upload render
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: wicked-render
           path: |
-            build/ci-wicked/app/viewport/rover-wicked.png
-            build/ci-wicked/Testing/Temporary/LastTest.log
+            build/ci-m1/app/viewport/rover-wicked.png
+            build/ci-m1/golden-diffs/
+            build/ci-m1/Testing/Temporary/LastTest.log
           if-no-files-found: ignore
           retention-days: 14
 
   raven-gui:
     # S5's Raven GUI: every ctest under Xvfb on lavapipe, then the spike's headless smoke run (types into the
     # composer, scrolls, takes screenshots). About 5 minutes; Raven's checkout takes seconds, so it is not cached.
+    # It builds the M1 workbench without Wicked (the still-image stage); the Wicked job builds it with the live one.
     name: app (ubuntu-24.04, Raven GUI)
     needs: changes
     if: needs.changes.outputs.raven == 'true'
