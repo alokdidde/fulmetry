@@ -51,6 +51,7 @@
         },
         "stepFile": { "type": "string" },
         "meshFile": { "type": "string" },
+        "sourceHash": { "type": "string", "description": "Hash of the part's CAD source as last built (cad.build sourceHash, e.g. sha256:<hex>); checks' inputHashes are compared with it" },
         "costUsd": { "type": "number", "minimum": 0 },
         "massG": { "type": "number", "minimum": 0 },
         "joint": {
