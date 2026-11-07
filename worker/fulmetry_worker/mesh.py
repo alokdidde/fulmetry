@@ -16,9 +16,10 @@ from __future__ import annotations
 import json
 import struct
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-import numpy as np
+if TYPE_CHECKING:  # numpy comes with the cad extra; the SolidCraft path only needs PALETTE
+    import numpy as np
 
 # Material hints: base colour (sRGB hex; written to glTF as linear RGB), roughness, metallic. Keys are what part
 # sources put in each child's `label`.
@@ -75,6 +76,8 @@ def material_from_color(name: str, color: str, roughness: float = 0.6, metallic:
 
 def _triangulate(shape: Any, linear: float, angular: float) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Positions, normals (float32) and triangle indices (uint32) for every face of `shape`."""
+    import numpy as np
+
     from OCP.BRep import BRep_Tool
     from OCP.BRepLib import BRepLib_ToolTriangulatedShape
     from OCP.BRepMesh import BRepMesh_IncrementalMesh
@@ -136,6 +139,8 @@ def split_by_material(shape: Any) -> list[tuple[str | None, Any]]:
 def write_glb(shape: Any, path: str | Path, default: dict, *, linear: float = 0.05, angular: float = 0.2,
               name: str = "part") -> dict:
     """Writes `shape` to `path` as GLB; returns {"materials": [...], "triangles": n, "bytes": size}."""
+    import numpy as np
+
     groups: dict[str, list[Any]] = {}
     for label, child in split_by_material(shape):
         key = label if label in PALETTE else "_default"
