@@ -2,15 +2,23 @@
 // This header has no Wicked includes; the engine lives behind a pimpl in WickedViewport.cpp.
 #pragma once
 #include <memory>
+#include <string>
+#include <vector>
 
 #include "fulmetry/core/IViewport.h"
+#include "fulmetry/viewport/MeshAsset.h"
 
 namespace fulmetry::viewport {
 
 struct WickedOptions {
-    // Frames rendered per renderToImage call. Temporal effects (TAA, eye adaption) need a few to settle.
-    int warmupFrames = 4;
+    // Frames averaged per renderToImage call, each with the key light moved across a small disk: the samples of
+    // the soft (area-light) shadow. 1 is fastest and gives a hard-edged shadow.
+    int frames = 8;
     bool outlines = true;  // dark edges from Wicked's depth outline pass
+    bool shadows = true;   // soft key-light shadow on the ground and between parts
+    bool ambientOcclusion = true;  // screen-space AO (SSAO): grey in crevices and where parts meet the ground
+    int msaa = 4;          // samples per pixel; 1 switches to FXAA
+    std::string assetRoot;  // directory that relative Part.meshFile paths start from (the project root)
 };
 
 class WickedViewport : public IViewport {
@@ -51,6 +59,9 @@ public:
 
     // Wall time of the last renderToImage frame loop, in milliseconds (all warm-up frames, GPU wait included).
     double lastRenderMs() const;
+    // Parts drawn from their meshFile (the rest are boxes over Part.bounds), and why a meshFile was not used.
+    int meshFileCount() const;
+    const std::vector<std::string>& meshWarnings() const;
 
 private:
     struct Impl;

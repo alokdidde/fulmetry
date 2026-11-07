@@ -1,4 +1,19 @@
 # Owner: S2 Viewport. Real implementation builds when FULMETRY_WITH_WICKED is ON; until then the app uses the fake.
+
+# Part meshes (glTF loading, box fallback, ray picking). No GPU and no Wicked, so it builds and is tested everywhere.
+add_library(fulmetry_viewport_mesh STATIC src/MeshAsset.cpp)
+target_include_directories(fulmetry_viewport_mesh PUBLIC include)
+target_include_directories(fulmetry_viewport_mesh SYSTEM PRIVATE third_party)  # cgltf 1.14 (MIT), vendored
+target_link_libraries(fulmetry_viewport_mesh PUBLIC fulmetry_core)
+
+if(FULMETRY_BUILD_TESTS)
+  add_executable(fulmetry_viewport_mesh_tests tests/test_mesh_asset.cpp)
+  target_link_libraries(fulmetry_viewport_mesh_tests PRIVATE fulmetry_viewport_mesh fulmetry_third_party)
+  target_compile_definitions(fulmetry_viewport_mesh_tests PRIVATE
+    FULMETRY_TESTMESHES="${CMAKE_CURRENT_SOURCE_DIR}/spike/testmeshes")
+  add_test(NAME viewport_mesh COMMAND fulmetry_viewport_mesh_tests)
+endif()
+
 if(NOT FULMETRY_WITH_WICKED)
   add_library(fulmetry_viewport INTERFACE)
   target_link_libraries(fulmetry_viewport INTERFACE fulmetry_core)
@@ -16,7 +31,7 @@ add_subdirectory(wicked)  # builds the engine with its own flags, not ours
 
 add_library(fulmetry_viewport STATIC src/WickedViewport.cpp)
 target_include_directories(fulmetry_viewport PUBLIC include)
-target_link_libraries(fulmetry_viewport PUBLIC fulmetry_core PRIVATE WickedEngine)
+target_link_libraries(fulmetry_viewport PUBLIC fulmetry_core fulmetry_viewport_mesh PRIVATE WickedEngine)
 # Wicked headers are not -Wpedantic clean; keep our warnings but treat theirs as system headers.
 target_include_directories(fulmetry_viewport SYSTEM PRIVATE ${WICKED_ROOT}/WickedEngine)
 target_compile_definitions(fulmetry_viewport PUBLIC FULMETRY_HAS_WICKED=1)
@@ -33,15 +48,26 @@ target_link_libraries(fulmetry_wicked_spike PRIVATE fulmetry_viewport fulmetry_p
 fulmetry_wicked_runtime(fulmetry_wicked_spike)
 
 if(FULMETRY_BUILD_TESTS)
+  set(rover_fixture ${PROJECT_SOURCE_DIR}/fixtures/rover/fulmetry.project.json)
+  set(testmeshes ${CMAKE_CURRENT_SOURCE_DIR}/spike/testmeshes)
   add_executable(fulmetry_viewport_tests tests/test_wicked_viewport.cpp)
   target_include_directories(fulmetry_viewport_tests PRIVATE ${PROJECT_SOURCE_DIR}/app/tests)
   target_link_libraries(fulmetry_viewport_tests PRIVATE fulmetry_viewport fulmetry_project fulmetry_third_party)
-  target_compile_definitions(fulmetry_viewport_tests PRIVATE FULMETRY_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+  target_compile_definitions(fulmetry_viewport_tests PRIVATE FULMETRY_SOURCE_DIR="${PROJECT_SOURCE_DIR}"
+                                                             FULMETRY_TESTMESHES="${testmeshes}")
   fulmetry_wicked_runtime(fulmetry_viewport_tests)
-  # Root CMakeLists calls enable_testing() after the modules; enable it here so this test registers.
-  enable_testing()
   add_test(NAME viewport_wicked COMMAND fulmetry_viewport_tests)
   add_test(NAME viewport_wicked_spike
-    COMMAND fulmetry_wicked_spike ${PROJECT_SOURCE_DIR}/fixtures/rover/fulmetry.project.json
-            ${CMAKE_CURRENT_BINARY_DIR}/rover-wicked.png 640 400)
+    COMMAND fulmetry_wicked_spike ${rover_fixture} ${CMAKE_CURRENT_BINARY_DIR}/rover-wicked.png 640 400 --no-warm)
+
+  # High-key render of the rover with the stand-in meshes, one part selected. lavapipe is deterministic run to run;
+  # the limits leave room for another Mesa/LLVM version, not for a moved part or a lost shadow or outline.
+  # Goldens are per backend: this one is lavapipe (software Vulkan). Regenerate: FULMETRY_UPDATE_GOLDENS=1.
+  fulmetry_add_golden_test(NAME rover-wicked-highkey
+    COMMAND $<TARGET_FILE:fulmetry_wicked_spike> ${rover_fixture} rover-wicked-highkey.png 640 400
+            --meshes ${testmeshes} --select part:rover/camera-head --no-warm
+    OUTPUT rover-wicked-highkey.png
+    GOLDEN ${CMAKE_CURRENT_SOURCE_DIR}/tests/golden/rover-wicked-highkey.png
+    THRESHOLD 16 MAX_RMSE 3.0 MAX_FRACTION 0.005
+    LABELS wicked)
 endif()
