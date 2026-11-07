@@ -35,4 +35,21 @@ if(FULMETRY_WITH_RAVEN_GUI)
   add_library(fulmetry_ui_raven STATIC raven/Kit.cpp raven/StageImage.cpp raven/WorkbenchView.cpp)
   target_include_directories(fulmetry_ui_raven PUBLIC raven)
   target_link_libraries(fulmetry_ui_raven PUBLIC fulmetry_ui raven::raven)
+
+  add_executable(fulmetry_workbench raven/main.cpp)
+  target_include_directories(fulmetry_workbench PRIVATE ${PROJECT_SOURCE_DIR}/app/tests)
+  target_link_libraries(fulmetry_workbench PRIVATE fulmetry_ui_raven fulmetry_project fulmetry_third_party)
+  target_compile_definitions(fulmetry_workbench PRIVATE
+    FULMETRY_UI_ASSETS="${CMAKE_CURRENT_SOURCE_DIR}/assets" FULMETRY_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+
+  if(FULMETRY_BUILD_TESTS)
+    # Builds the whole shell on Raven's null platform and backend (no display, no GPU), runs 120 frames with
+    # the action menu open, the chat docked left and a part selected, and fails on any Raven warning or error.
+    add_test(NAME ui_workbench_headless
+      COMMAND fulmetry_workbench --headless --strict --frames 120 --open menu --chat-left
+              --select part:rover/camera-head)
+    set_tests_properties(ui_workbench_headless PROPERTIES
+      PASS_REGULAR_EXPRESSION "frames: 120, raven reports: 0, chat entries: 6, selection: part:rover/camera-head"
+      ENVIRONMENT "RAVEN_LIVE_RELOAD=0")
+  endif()
 endif()
