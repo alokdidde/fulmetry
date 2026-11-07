@@ -76,6 +76,18 @@ bool WorkbenchModel::selectPart(const PartId& part) {
     return false;
 }
 
+void WorkbenchModel::setExploded(bool on) {
+    if (on == exploded_) return;
+    exploded_ = on;
+    touch();
+}
+
+void WorkbenchModel::setXray(bool on) {
+    if (on == xray_) return;
+    xray_ = on;
+    touch();
+}
+
 void WorkbenchModel::clearSelection() {
     if (!selected_) return;
     selected_.reset();

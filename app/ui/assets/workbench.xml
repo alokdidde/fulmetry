@@ -74,7 +74,7 @@
 						<VBox Name="pin.body" Spacing="6" Slot.Fill="1" Slot.Padding="10,8,10,9"/>
 					</HBox>
 				</Border>
-				<Border Width="2" Height="10" Background="#E5322D" Slot.HAlign="Center"/>
+				<Border Name="pin.stem" Width="2" Height="10" Background="#E5322D" Slot.HAlign="Center"/>
 			</VBox>
 
 			<!-- object or part card, bottom right -->

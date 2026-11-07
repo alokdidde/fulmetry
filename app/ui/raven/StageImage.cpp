@@ -68,6 +68,12 @@ void StageImage::frameToWidget(float px, float py, float& x, float& y) const {
     y = cy + py * s;
 }
 
+void StageImage::setLeader(const std::optional<Leader>& leader) {
+    if (leader == leader_) return;
+    leader_ = leader;
+    if (widget_ != R_INVALID_ID) Rwidget_invalidate(widget_);
+}
+
 void StageImage::paint(Rid, RPainter* p, float w, float h, void* user) {
     auto* self = static_cast<StageImage*>(user);
     // the high-key stage colour behind the frame (prototype: #e8ecf0)
@@ -77,6 +83,14 @@ void StageImage::paint(Rid, RPainter* p, float w, float h, void* user) {
     self->coverRect(w, h, x, y, cw, chh);
     Rdraw_push_clip_rect(p, 0, 0, w, h);
     Rdraw_image(p, self->texture_, x, y, cw, chh, 1, 1, 1, 1);
+    if (const auto& l = self->leader_) {
+        // the accent red (#E5322D): a hairline to the card, a ringed dot on the part
+        constexpr float r = 0.898f, g = 0.196f, b = 0.176f;
+        Rdraw_line(p, l->x0, l->y0, l->x1, l->y1, 1.5f, r, g, b, 1);
+        Rdraw_circle(p, l->x0, l->y0, 7.5f, 0, 0, 0, 0.12f);
+        Rdraw_circle(p, l->x0, l->y0, 6.5f, 1, 1, 1, 1);
+        Rdraw_circle(p, l->x0, l->y0, 4.5f, r, g, b, 1);
+    }
     Rdraw_pop_clip_rect(p);
 }
 

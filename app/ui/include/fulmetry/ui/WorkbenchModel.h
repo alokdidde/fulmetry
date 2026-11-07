@@ -95,6 +95,12 @@ public:
     bool selectPart(const PartId& part);
     void clearSelection();
 
+    // ---- stage view modes (the Actions menu toggles them; the stage draws them)
+    bool exploded() const { return exploded_; }
+    void setExploded(bool on);
+    bool xray() const { return xray_; }
+    void setXray(bool on);
+
     // ---- derived views for the current scope
     Totals totals() const;
     std::vector<PartGroup> partGroups() const;
@@ -123,6 +129,7 @@ private:
     Project project_;
     int activeTab_ = 1;  // the first object, as in the prototype
     std::optional<PartId> selected_;
+    bool exploded_ = false, xray_ = false;
     std::vector<ChatEntry> chat_;
     uint64_t version_ = 1, chatVersion_ = 1;
 };

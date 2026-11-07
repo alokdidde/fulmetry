@@ -87,6 +87,23 @@ TEST_CASE("workbench model: selecting a part moves the tab to its object") {
     CHECK(m.objectSubtitle(ObjectId("obj:rover")) == "13 parts \xC2\xB7 linked to Wireless remote");
 }
 
+TEST_CASE("workbench model: explode and x-ray are stage modes that bump the version once") {
+    WorkbenchModel m(rover());
+    CHECK_FALSE(m.exploded());
+    CHECK_FALSE(m.xray());
+    const auto v0 = m.version();
+    m.setExploded(true);
+    CHECK(m.exploded());
+    CHECK(m.version() == v0 + 1);
+    m.setExploded(true);  // no change, no rebuild
+    CHECK(m.version() == v0 + 1);
+    m.setXray(true);
+    CHECK(m.xray());
+    m.setExploded(false);
+    CHECK_FALSE(m.exploded());
+    CHECK(m.version() == v0 + 3);
+}
+
 TEST_CASE("workbench model: sample chat loads with agent cards and dividers") {
     WorkbenchModel m(rover());
     REQUIRE(m.loadChat(slurp(FULMETRY_SOURCE_DIR "/app/ui/assets/sample-chat.json")).ok());
