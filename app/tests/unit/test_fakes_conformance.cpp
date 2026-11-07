@@ -39,6 +39,36 @@ TEST_CASE("FakeAgentClient approval conformance") {
                                           "fake://local", p);
 }
 
+TEST_CASE("FakeAgentClient harness conformance") {
+    Project p = test::rover();
+    conformance::harnessConformance([p] { return std::make_unique<fakes::FakeAgentClient>(p); }, "fake://local", p);
+}
+
+TEST_CASE("fake harnesses: a first run has nothing ready, and Codex signs in with a device code") {
+    Project p = test::rover();
+    fakes::FakeAgentClient c(p, false, fakes::FakeAgentClient::Harnesses::Fresh);
+    REQUIRE(c.connect("fake://local").ok());
+    for (const auto& h : c.harnesses()) CHECK(h.status != HarnessStatus::Ready);
+    ChatRequest hello;
+    hello.text = "hello";
+    auto none = c.sendChat(hello);
+    REQUIRE(!none.ok());
+    CHECK(none.error().code == "no_harness");
+
+    REQUIRE(c.signInHarness("codex").ok());
+    auto codex = [&] {
+        for (const auto& h : c.harnesses()) if (h.id == "codex") return h;
+        return Harness{};
+    };
+    CHECK(codex().setup.prompt == HarnessSetup::Prompt::DeviceCode);
+    CHECK(!codex().setup.userCode.empty());
+    EventBus bus;
+    for (int i = 0; i < 6; ++i) c.poll(bus);
+    CHECK(codex().status == HarnessStatus::Ready);
+    auto chat = c.sendChat(hello);  // the first ready harness runs it
+    CHECK(chat.ok());
+}
+
 TEST_CASE("agents are named after their task") {
     CHECK(fakes::FakeAgentClient::nameFor("It has to drive on the rug… make the wheels bigger with more grip") ==
           "Make the wheels bigger");

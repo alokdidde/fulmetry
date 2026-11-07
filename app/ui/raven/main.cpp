@@ -4,6 +4,7 @@
 //                      [--size 1440x900] [--chat-left] [--open tray|menu] [--select <part id>] [--hover <part id>] [--tab N]
 //                      [--explode] [--xray] [--orbit DX,DY] [--zoom N] [--still] [--interactive-scale S]
 //                      [--frames N] [--run-seconds S] [--shot out.png] [--headless] [--strict]
+//                      [--harnesses fresh|some|all] [--open onboard|picker] [--onboard <harness id>] [--do <command>]...
 //
 // Built with FULMETRY_WITH_WICKED, the stage is the live Wicked render of the project (LiveStage); --still
 // shows the pre-rendered image instead, which is all a build without Wicked has. --shot waits for the stage's
@@ -11,6 +12,10 @@
 // notches (positive: closer) before that.
 // --headless uses Raven's null platform and backend (no display, no GPU): the ctest runs it that way.
 // --strict exits with 2 when Raven reported any warning or error (unknown XML tag or attribute, missing file...).
+// --harnesses sets which harnesses the fake back end starts with ready (fresh: none, the first-run onboarding).
+// --do runs a harness command once the window is up, as its button would (WorkbenchView::harnessCommand), e.g.
+// --do signin:codex. The chosen harness and model are kept in settings.json under FULMETRY_CONFIG_DIR, else
+// $XDG_CONFIG_HOME/fulmetry or ~/.config/fulmetry (%APPDATA%\Fulmetry on Windows).
 #include <Raven.h>
 
 #include <chrono>
@@ -21,6 +26,7 @@
 #include <memory>
 #include <sstream>
 #include <string>
+#include <vector>
 
 #include <nlohmann/json.hpp>
 
@@ -60,6 +66,9 @@ struct Options {
     std::string open;
     std::string select, hover;
     std::string shot;
+    std::string harnesses = "some";
+    std::string onboard;
+    std::vector<std::string> commands;
     int width = 0, height = 0;
     int frames = 0;          // quit after this many frames (0: run until closed or --run-seconds)
     double runSeconds = 0;
@@ -98,6 +107,9 @@ Options parse(int argc, char** argv) {
         else if (a == "--select") o.select = next();
         else if (a == "--hover") o.hover = next();
         else if (a == "--shot") o.shot = next();
+        else if (a == "--harnesses") o.harnesses = next();
+        else if (a == "--onboard") o.onboard = next();
+        else if (a == "--do") o.commands.push_back(next());
         else if (a == "--frames") o.frames = std::atoi(next().c_str());
         else if (a == "--run-seconds") o.runSeconds = std::atof(next().c_str());
         else if (a == "--size") std::sscanf(next().c_str(), "%dx%d", &o.width, &o.height);
@@ -116,6 +128,39 @@ Options parse(int argc, char** argv) {
     if (o.chat.empty()) o.chat = o.assets + "/sample-chat.json";
     if (o.stage.empty()) o.stage = o.assets + "/stage/rover-highkey.png";
     return o;
+}
+
+// Where the harness choice is kept between runs.
+std::filesystem::path settingsPath() {
+    namespace fs = std::filesystem;
+    if (const char* d = std::getenv("FULMETRY_CONFIG_DIR"); d && *d) return fs::path(d) / "settings.json";
+#ifdef _WIN32
+    if (const char* d = std::getenv("APPDATA"); d && *d) return fs::path(d) / "Fulmetry" / "settings.json";
+#else
+    if (const char* d = std::getenv("XDG_CONFIG_HOME"); d && *d) return fs::path(d) / "fulmetry" / "settings.json";
+    if (const char* d = std::getenv("HOME"); d && *d) return fs::path(d) / ".config" / "fulmetry" / "settings.json";
+#endif
+    return {};
+}
+
+fulmetry::ui::HarnessChoice loadChoice() {
+    const auto path = settingsPath();
+    if (path.empty()) return {};
+    auto j = nlohmann::json::parse(slurp(path.string()), nullptr, false);
+    if (j.is_discarded() || !j.is_object()) return {};
+    return {j.value("harness", ""), j.value("model", "")};
+}
+
+void saveChoice(const fulmetry::ui::HarnessChoice& c) {
+    const auto path = settingsPath();
+    if (path.empty()) return;
+    std::error_code ec;
+    std::filesystem::create_directories(path.parent_path(), ec);
+    auto j = nlohmann::json::parse(slurp(path.string()), nullptr, false);
+    if (j.is_discarded() || !j.is_object()) j = nlohmann::json::object();
+    j["harness"] = c.harness;
+    j["model"] = c.model;
+    std::ofstream(path, std::ios::binary | std::ios::trunc) << j.dump(2) << "\n";
 }
 
 bool saveShot(Rid window, const std::string& path) {
@@ -170,7 +215,12 @@ int main(int argc, char** argv) {
     }
 #endif
 
-    fakes::FakeAgentClient agent(project.value());
+    const auto start0 = o.harnesses == "fresh" ? fakes::FakeAgentClient::Harnesses::Fresh
+                        : o.harnesses == "all"   ? fakes::FakeAgentClient::Harnesses::All
+                                                 : fakes::FakeAgentClient::Harnesses::Some;
+    fakes::FakeAgentClient agent(project.value(), false, start0);
+    model.setPreferredChoice(loadChoice());
+    ui::HarnessChoice savedChoice = model.preferredChoice();
     agent.connect("fake://workbench");
     EventBus bus;
 
@@ -207,6 +257,10 @@ int main(int argc, char** argv) {
         if (o.width > 0 && o.height > 0) Rwindow_set_size(view.window(), o.width, o.height);
         if (o.open == "tray") view.setTrayOpen(true);
         if (o.open == "menu") view.setMenuOpen(true);
+        for (const auto& cmd : o.commands)
+            if (!view.harnessCommand(cmd)) std::fprintf(stderr, "harness command %s failed\n", cmd.c_str());
+        if (o.open == "onboard" || !o.onboard.empty()) view.setOnboardOpen(true, o.onboard);
+        if (o.open == "picker") view.setPickerOpen(true);
         std::printf("workbench ready: %s, %zu chat entries\n", model.project().name.c_str(), model.chat().size());
         std::fflush(stdout);
 
@@ -216,6 +270,10 @@ int main(int argc, char** argv) {
         while (o.headless ? Rdraw_frame() : Rwait_frame(0.05)) {
             const double t = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
             view.update(t);
+            if (!(model.preferredChoice() == savedChoice)) {
+                savedChoice = model.preferredChoice();
+                saveChoice(savedChoice);
+            }
             if (live) {
                 live->update(t);
                 if (!orbited && live->settled()) {
@@ -239,6 +297,7 @@ int main(int argc, char** argv) {
             if (saveShot(view.window(), o.shot)) std::printf("screenshot: %s\n", o.shot.c_str());
             else std::fprintf(stderr, "screenshot failed (backend cannot capture)\n");
         }
+        std::printf("new agents run on: %s/%s\n", model.choice().harness.c_str(), model.choice().model.c_str());
         std::printf("frames: %d, raven reports: %d, chat entries: %zu, selection: %s\n", frame, g_reports,
                     model.chat().size(), model.selectedPart() ? model.selectedPart()->value.c_str() : "none");
     }

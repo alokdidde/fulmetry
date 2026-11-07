@@ -232,8 +232,12 @@ Status WorkbenchModel::loadChat(const std::string& text) {
 Result<ChatRequest> WorkbenchModel::compose(const std::string& text, const std::string& time) {
     auto first = text.find_first_not_of(" \t\r\n");
     if (first == std::string::npos) return Error{"invalid_argument", "empty message"};
+    const HarnessChoice runOn = choice();
+    if (runOn.harness.empty()) return Error{"no_harness", "connect a harness first"};
     ChatRequest req;
     req.text = text.substr(first);
+    req.provider = runOn.harness;
+    req.model = runOn.model;
     ChatEntry e;
     e.author = "You";
     e.time = time;
@@ -262,7 +266,72 @@ AgentCardView WorkbenchModel::cardFrom(const AgentCard& card) const {
     v.preview = card.preview;
     v.replies = card.replies;
     for (const auto& p : card.parts) v.chips.push_back(chip(p));
+    if (!card.provider.empty()) v.harness = harnessLabel(card.provider, card.model);
     return v;
+}
+
+void WorkbenchModel::setHarnesses(std::vector<Harness> harnesses) {
+    harnesses_ = std::move(harnesses);
+    ++harnessVersion_;
+    touch();
+}
+
+const Harness* WorkbenchModel::harness(const std::string& id) const {
+    for (const auto& h : harnesses_)
+        if (h.id == id) return &h;
+    return nullptr;
+}
+
+std::vector<const Harness*> WorkbenchModel::readyHarnesses() const {
+    std::vector<const Harness*> out;
+    for (const auto& h : harnesses_)
+        if (h.status == HarnessStatus::Ready) out.push_back(&h);
+    return out;
+}
+
+HarnessChoice WorkbenchModel::choice() const {
+    const Harness* h = harness(preferred_.harness);
+    if (h && h->status == HarnessStatus::Ready) {
+        for (const auto& m : h->models)
+            if (m.id == preferred_.model) return preferred_;
+        return {h->id, h->models.empty() ? std::string() : h->models.front().id};
+    }
+    auto ready = readyHarnesses();
+    if (ready.empty()) return {};
+    return {ready.front()->id, ready.front()->models.empty() ? std::string() : ready.front()->models.front().id};
+}
+
+bool WorkbenchModel::choose(const std::string& id, const std::string& model) {
+    const Harness* h = harness(id);
+    if (!h || h->status != HarnessStatus::Ready) return false;
+    std::string m = model;
+    if (m.empty()) m = h->models.empty() ? std::string() : h->models.front().id;
+    else if (std::none_of(h->models.begin(), h->models.end(), [&](const HarnessModel& x) { return x.id == m; }))
+        return false;
+    setPreferredChoice({id, m});
+    return true;
+}
+
+void WorkbenchModel::setPreferredChoice(HarnessChoice c) {
+    if (c == preferred_) return;
+    preferred_ = std::move(c);
+    ++harnessVersion_;
+    touch();
+}
+
+std::string WorkbenchModel::harnessLabel(const std::string& id, const std::string& model) const {
+    const Harness* h = harness(id);
+    std::string out = h ? h->name : id;
+    if (h)
+        for (const auto& m : h->models)
+            if (m.id == model) return out + " \xC2\xB7 " + m.name;
+    if (!model.empty()) out += " \xC2\xB7 " + model;
+    return out;
+}
+
+std::string WorkbenchModel::choiceLabel() const {
+    const HarnessChoice c = choice();
+    return c.harness.empty() ? "No harness connected" : harnessLabel(c.harness, c.model);
 }
 
 void WorkbenchModel::apply(const Event& event, const std::string& time) {
@@ -297,6 +366,8 @@ void WorkbenchModel::apply(const Event& event, const std::string& time) {
         for (auto& c : project_.checks)
             if (c.id == chk->check.id) c = chk->check;
         touch();
+    } else if (const auto* hs = std::get_if<HarnessesUpdated>(&event)) {
+        setHarnesses(hs->harnesses);
     } else if (const auto* cu = std::get_if<CommentUpdated>(&event)) {
         for (auto& c : project_.comments)
             if (c.id == cu->comment.id) c = cu->comment;

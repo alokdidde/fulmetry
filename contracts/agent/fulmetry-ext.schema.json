@@ -3,7 +3,8 @@
   "$id": "https://fulmetry.dev/agent/fulmetry-ext.schema.json",
   "title": "Fulmetry extensions to the T3 Code wire protocol",
   "description": "Effect RPC methods on T3 Code's /ws (a Request frame's tag is the method name, its payload the params) and the events the fulmetry.subscribe stream pushes. x-methods maps each method to its params and result. The client sends the extension version it speaks as fulmetryExt, both in T3's clientCapabilities query parameter and in fulmetry.subscribe; a server that does not speak it fails the subscribe.",
-  "x-fulmetryExtVersion": 1,
+  "x-fulmetryExtVersion": 2,
+  "x-harnessSetup": "Harnesses (the onboarding screen and the picker in the chat input) use T3 Code's own methods, not this extension: subscribeServerConfig for the list (ServerProvider: instanceId, driver, installed, auth, status, models), provider.install.start/subscribe/cancel/remove, provider.auth.start/subscribe/respond/cancel/logout, server.updateSettings (providerInstances: enable, add or remove an instance) and server.searchAcpRegistry/prepareAcpRegistryAgent for registry harnesses. provider below is a ServerProvider.instanceId and model one of its models[].slug.",
   "x-methods": {
     "fulmetry.subscribe": { "params": "#/$defs/subscribe", "stream": "#/$defs/event" },
     "fulmetry.startAgentForComment": { "params": "#/$defs/startAgentForComment", "result": "#/$defs/agentStarted" },
@@ -23,11 +24,19 @@
       "description": "Chosen by the client, unique per command; a repeated commandId returns the first answer and starts nothing"
     },
     "empty": { "type": "object", "additionalProperties": false },
+    "provider": {
+      "type": "string", "maxLength": 64, "pattern": "^[a-zA-Z][a-zA-Z0-9_-]*$",
+      "description": "T3 Code provider instance id (ServerProvider.instanceId), e.g. raven, claudeAgent, codex. Omitted: the project's default harness"
+    },
+    "model": {
+      "type": "string", "minLength": 1, "maxLength": 256,
+      "description": "One of the provider's models (ServerProvider.models[].slug). Omitted: the provider's default model"
+    },
 
     "subscribe": {
       "type": "object", "required": ["fulmetryExt", "projectRoot"],
       "properties": {
-        "fulmetryExt": { "type": "integer", "minimum": 1, "description": "Extension version the client speaks; 1 here" },
+        "fulmetryExt": { "type": "integer", "minimum": 1, "description": "Extension version the client speaks; 2 here" },
         "projectRoot": { "type": "string", "description": "Absolute path of the project whose events to push" }
       }
     },
@@ -41,7 +50,8 @@
         "text": { "type": "string", "minLength": 1 },
         "projectRoot": { "type": "string" },
         "baseRevision": { "type": "string", "minLength": 1, "description": "Commit sha the agent's worktree branches from" },
-        "provider": { "enum": ["raven", "claudeAgent"], "default": "raven" },
+        "provider": { "$ref": "#/$defs/provider" },
+        "model": { "$ref": "#/$defs/model" },
         "renderPng": {
           "type": "string", "contentEncoding": "base64", "contentMediaType": "image/png", "maxLength": 5592408,
           "description": "What the comment points at, as seen in the app; at most 4 MiB of PNG. Becomes an image attachment"
@@ -59,7 +69,9 @@
         "text": { "type": "string", "minLength": 1 },
         "scope": { "enum": ["project", "object", "part", "simulation", "newObject"] },
         "objectId": { "$ref": "#/$defs/objectId" },
-        "partId": { "$ref": "#/$defs/partId" }
+        "partId": { "$ref": "#/$defs/partId" },
+        "provider": { "$ref": "#/$defs/provider" },
+        "model": { "$ref": "#/$defs/model" }
       }
     },
     "chatStarted": { "type": "object", "required": ["agentId"], "properties": { "agentId": { "$ref": "#/$defs/agentId" } } },
@@ -107,7 +119,8 @@
           "type": "object", "required": ["requestId", "title"],
           "properties": { "requestId": { "type": "string", "minLength": 1 }, "title": { "type": "string" } }
         },
-        "provider": { "enum": ["raven", "claudeAgent"] },
+        "provider": { "$ref": "#/$defs/provider" },
+        "model": { "$ref": "#/$defs/model" },
         "branch": { "type": "string" },
         "worktreePath": { "type": "string" },
         "revision": { "type": "integer", "minimum": 1, "description": "Number of the revision its work was saved as" }

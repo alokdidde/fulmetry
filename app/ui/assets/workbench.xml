@@ -8,6 +8,7 @@
 <Window Title="Fulmetry" Width="1440" Height="900" MinWidth="1100" MinHeight="640" ClearColor="#FFFFFF">
 	<Shortcut Keys="Escape" Action="wb.escape"/>
 
+	<Overlay Name="layers">
 	<HBox Name="root" Spacing="0">
 		<!-- ===================================================== stage -->
 		<Overlay Name="stage.area" Slot.Fill="1" Clip="true">
@@ -120,8 +121,17 @@
 				<VBox Spacing="8" Slot.Padding="12,10,12,12">
 					<HBox Name="about" Spacing="6">
 						<Label TextSize="11.5" Color="#66707B" Slot.VAlign="Center">About</Label>
-						<Border Background="#F3F5F7" BorderColor="#E1E5EA" BorderWidth="1" CornerRadius="9" Padding="7,1,8,2">
+						<Border Background="#F3F5F7" BorderColor="#E1E5EA" BorderWidth="1" CornerRadius="9" Padding="7,1,8,2" Slot.VAlign="Center">
 							<Label Name="about.label" TextSize="11.5" Color="#14171A"/>
+						</Border>
+						<Border Slot.Fill="1"/>
+						<!-- what new agents run on; opens the harness picker -->
+						<Border Name="harness.chip" Background="#FFFFFF" BorderColor="#E1E5EA" BorderWidth="1" CornerRadius="9" Padding="7,2,6,2" Cursor="Hand" Slot.VAlign="Center">
+							<HBox Spacing="5">
+								<Border Name="harness.dot" Width="7" Height="7" CornerRadius="3.5" Background="#66707B" Slot.VAlign="Center"/>
+								<Label Name="harness.label" Font="fonts/Inter-Medium.ttf" TextSize="11.5" Color="#14171A" Slot.VAlign="Center"/>
+								<Image Source="icons/chevron-down.svg" Slot.VAlign="Center"/>
+							</HBox>
 						</Border>
 					</HBox>
 					<Border Background="#F3F5F7" BorderColor="#E1E5EA" BorderWidth="1" CornerRadius="6" Padding="10,5,5,5">
@@ -136,4 +146,51 @@
 			</VBox>
 		</Border>
 	</HBox>
+
+	<!-- ===================================================== harness picker, above the composer -->
+	<Panel Name="picker" Pad="6" Width="320" Visibility="Collapsed" Slot.HAlign="Right" Slot.VAlign="Bottom" Slot.Padding="0,0,12,88">
+		<VBox Name="picker.body" Spacing="0"/>
+	</Panel>
+
+	<!-- ===================================================== onboarding: connect harnesses -->
+	<Overlay Name="onboard" Visibility="Collapsed">
+		<Border Name="onboard.scrim" Background="#E9EDF1"/>
+		<Border Name="onboard.card" Background="#FFFFFF" BorderColor="#E1E5EA" BorderWidth="1" CornerRadius="4" Shadow="48,0,14"
+			Width="1040" Height="740" Clip="true" Slot.HAlign="Center" Slot.VAlign="Center">
+			<VBox Spacing="0">
+				<HBox Spacing="14" Slot.Padding="32,26,24,22">
+					<VBox Spacing="4" Slot.Fill="1">
+						<Eyebrow>HARNESSES</Eyebrow>
+						<Label Name="onboard.title" Font="fonts/InterTight-Bold.ttf" TextSize="28" Color="#14171A">Connect your harnesses</Label>
+						<Label Name="onboard.sub" TextSize="13.5" Color="#5D6670"/>
+					</VBox>
+					<Border Name="onboard.close" Background="#F3F5F7" CornerRadius="3" Padding="8" Cursor="Hand" Slot.VAlign="Top">
+						<Image Source="icons/close.svg"/>
+					</Border>
+				</HBox>
+				<Rule Vertical="false"/>
+				<HBox Spacing="0" Slot.Fill="1">
+					<Border Background="#F7F8FA" Width="372">
+						<ScrollBox Name="onboard.scroll">
+							<VBox Name="onboard.list" Spacing="2" Slot.Padding="12,12,12,12"/>
+						</ScrollBox>
+					</Border>
+					<Rule/>
+					<ScrollBox Name="onboard.detail.scroll" Slot.Fill="1">
+						<VBox Name="onboard.detail" Spacing="18" Slot.Padding="32,28,32,28"/>
+					</ScrollBox>
+				</HBox>
+				<Rule Vertical="false"/>
+				<HBox Spacing="10" Slot.Padding="32,14,24,14">
+					<Label TextSize="12.5" Color="#66707B" Slot.VAlign="Center">New agents run on</Label>
+					<Border Name="onboard.choice.dot" Width="8" Height="8" CornerRadius="4" Background="#66707B" Slot.VAlign="Center"/>
+					<Label Name="onboard.choice" Font="fonts/Inter-SemiBold.ttf" TextSize="13" Color="#14171A" Slot.VAlign="Center" Slot.Fill="1"/>
+					<Border Name="onboard.done" Background="#E5322D" CornerRadius="3" Padding="18,9" Cursor="Hand">
+						<Label Name="onboard.done.label" Font="fonts/Inter-SemiBold.ttf" TextSize="13" Color="#FFFFFF">Open the workbench</Label>
+					</Border>
+				</HBox>
+			</VBox>
+		</Border>
+	</Overlay>
+	</Overlay>
 </Window>

@@ -32,7 +32,8 @@ if(FULMETRY_WITH_RAVEN_GUI)
 
   add_subdirectory(spike)
 
-  add_library(fulmetry_ui_raven STATIC raven/Kit.cpp raven/StageImage.cpp raven/WorkbenchView.cpp raven/LiveStage.cpp)
+  add_library(fulmetry_ui_raven STATIC raven/Kit.cpp raven/StageImage.cpp raven/WorkbenchView.cpp raven/WorkbenchHarness.cpp
+                                       raven/LiveStage.cpp)
   target_include_directories(fulmetry_ui_raven PUBLIC raven)
   target_link_libraries(fulmetry_ui_raven PUBLIC fulmetry_ui raven::raven)
 
@@ -58,5 +59,13 @@ if(FULMETRY_WITH_RAVEN_GUI)
     set_tests_properties(ui_workbench_headless PROPERTIES
       PASS_REGULAR_EXPRESSION "frames: [0-9]+, raven reports: 0, chat entries: 6, selection: part:rover/camera-head"
       ENVIRONMENT "RAVEN_LIVE_RELOAD=0")
+    # First run: nothing is ready, the onboarding screen opens by itself; Raven is signed in with a key and
+    # becomes what new agents run on.
+    add_test(NAME ui_workbench_onboarding
+      COMMAND fulmetry_workbench --headless --strict --still --run-seconds 3 --harnesses fresh
+              --do signin:raven --do answer:raven=sk-test)
+    set_tests_properties(ui_workbench_onboarding PROPERTIES
+      PASS_REGULAR_EXPRESSION "onboarding open.*harness answer: raven.*new agents run on: raven/claude-sonnet-5-5\nframes: [0-9]+, raven reports: 0"
+      ENVIRONMENT "RAVEN_LIVE_RELOAD=0;FULMETRY_CONFIG_DIR=${CMAKE_CURRENT_BINARY_DIR}/test-config")
   endif()
 endif()

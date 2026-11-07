@@ -56,6 +56,14 @@ struct AgentCardView {
     std::string preview;  // latest reply
     std::vector<Chip> chips;
     int replies = 0;
+    std::string harness;  // "Claude Code · Opus 5.5", empty when the back end did not say
+};
+
+// What the next chat message or comment runs on.
+struct HarnessChoice {
+    std::string harness;  // Harness::id
+    std::string model;    // HarnessModel::id
+    bool operator==(const HarnessChoice&) const = default;
 };
 
 struct ChatEntry {
@@ -116,9 +124,29 @@ public:
     // Loads the sample chat (app/ui/assets/sample-chat.json). Errors: "parse_error".
     Status loadChat(const std::string& json);
     // Adds the person's message (pinned to the selected part, if any) and returns the request for the agent
-    // back end. Empty text: "invalid_argument".
+    // back end. Empty text: "invalid_argument"; no harness ready: "no_harness" (nothing is added).
     Result<ChatRequest> compose(const std::string& text, const std::string& time);
-    // Applies a back-end event: ChatPosted, AgentUpdated, RevisionSaved, CheckUpdated, CommentUpdated.
+    // ---- harnesses (the onboarding screen and the composer's picker)
+    const std::vector<Harness>& harnesses() const { return harnesses_; }
+    uint64_t harnessVersion() const { return harnessVersion_; }
+    void setHarnesses(std::vector<Harness> harnesses);
+    const Harness* harness(const std::string& id) const;
+    std::vector<const Harness*> readyHarnesses() const;
+    // True while no harness is ready: the onboarding screen opens on its own.
+    bool needsOnboarding() const { return readyHarnesses().empty(); }
+    // The chosen harness and model when they are ready, else the first ready harness and its default model; empty
+    // when none is ready. The stored choice is kept, so it comes back once its harness is ready again.
+    HarnessChoice choice() const;
+    // Chooses what new agents run on. False (and nothing changes) for an unknown or unready harness or model.
+    bool choose(const std::string& harness, const std::string& model = {});
+    const HarnessChoice& preferredChoice() const { return preferred_; }
+    void setPreferredChoice(HarnessChoice c);  // from saved settings; not checked against the harnesses
+    // "Claude Code · Opus 5.5", or "No harness connected".
+    std::string choiceLabel() const;
+    std::string harnessLabel(const std::string& harness, const std::string& model) const;
+
+    // Applies a back-end event: ChatPosted, AgentUpdated, RevisionSaved, CheckUpdated, CommentUpdated,
+    // HarnessesUpdated.
     void apply(const Event& event, const std::string& time);
 
 private:
@@ -131,7 +159,9 @@ private:
     std::optional<PartId> selected_;
     bool exploded_ = false, xray_ = false;
     std::vector<ChatEntry> chat_;
-    uint64_t version_ = 1, chatVersion_ = 1;
+    uint64_t version_ = 1, chatVersion_ = 1, harnessVersion_ = 1;
+    std::vector<Harness> harnesses_;
+    HarnessChoice preferred_;
 };
 
 }  // namespace fulmetry::ui

@@ -115,6 +115,7 @@ void WorkbenchView::bindStatic() {
         composer, [](Rid, const char*, void* user) { static_cast<WorkbenchView*>(user)->post([v = static_cast<WorkbenchView*>(user)] { v->send(); }); },
         this);
 
+    bindHarness();
     onClick(find("send"), [this] { post([this] { send(); }); },
             {kAccent, 0xD12A25, 1, 1, true});
     onClick(find("simulate"), [this] { post([] { std::printf("action: simulate\n"); std::fflush(stdout); }); },
@@ -128,7 +129,10 @@ void WorkbenchView::bindStatic() {
         [](Rid, const char*, void* user) {
             auto* v = static_cast<WorkbenchView*>(user);
             v->post([v] {
-                if (v->menuOpen_) v->setMenuOpen(false);
+                if (v->pickerOpen_) v->setPickerOpen(false);
+                else if (v->onboardOpen_) {
+                    if (!v->model_.needsOnboarding()) v->setOnboardOpen(false);
+                } else if (v->menuOpen_) v->setMenuOpen(false);
                 else if (v->trayOpen_) v->setTrayOpen(false);
                 else v->model_.clearSelection();
             });
@@ -178,8 +182,11 @@ void WorkbenchView::send() {
     Rid composer = find("composer");
     const std::string text = Rtext_input_get_text(composer) ? Rtext_input_get_text(composer) : "";
     auto req = model_.compose(text, now());
-    if (!req.ok()) return;
-    std::printf("chat sent: \"%s\"\n", req->text.c_str());
+    if (!req.ok()) {
+        if (req.error().code == "no_harness") setOnboardOpen(true);  // the text stays in the field
+        return;
+    }
+    std::printf("chat sent: \"%s\" on %s/%s\n", req->text.c_str(), req->provider.c_str(), req->model.c_str());
     std::fflush(stdout);
     Rtext_input_set_text(composer, "");
     if (agent_) {
@@ -240,6 +247,14 @@ void WorkbenchView::sync() {
     if (model_.chatVersion() != shownChat_) {
         shownChat_ = model_.chatVersion();
         buildChat();
+    }
+    if (model_.harnessVersion() != shownHarness_) {
+        buildHarnessChip();
+        if (pickerOpen_) buildPicker();
+        // The first run opens the onboarding screen by itself, until the person closes it.
+        if (!onboardOpen_ && onboardAuto_ && model_.needsOnboarding() && !model_.harnesses().empty()) setOnboardOpen(true);
+        else if (onboardOpen_) buildOnboard();
+        shownHarness_ = model_.harnessVersion();
     }
 }
 
@@ -552,7 +567,15 @@ void WorkbenchView::buildPin() {
         onClick(sendB, [this, comment = *c] {
             post([this, comment] {
                 if (!agent_) return;
-                auto id = agent_->startAgentForComment(comment, std::nullopt);
+                const HarnessChoice runOn = model_.choice();
+                if (runOn.harness.empty()) {
+                    setOnboardOpen(true);
+                    return;
+                }
+                StartAgentOptions opts;
+                opts.provider = runOn.harness;
+                opts.model = runOn.model;
+                auto id = agent_->startAgentForComment(comment, std::nullopt, opts);
                 std::printf("comment %s sent to %s\n", comment.id.value.c_str(), id.ok() ? id->agent.value.c_str() : "nobody");
                 std::fflush(stdout);
             });
@@ -681,6 +704,7 @@ void WorkbenchView::agentCard(Rid parent, const AgentCardView& card) {
     // two lines, as the prototype clamps it: card width 352 - 2 x 14 - 38 (avatar) - 2 x 13 (card) - the scroll bar, with a margin
     if (!card.preview.empty())
         wrapLabel(col, clampLines(card.preview, fonts_.regular, 12.5f, 246, 2), fonts_.regular, 12.5f, kMute);
+    if (!card.harness.empty()) label(col, card.harness, fonts_.regular, 11, kMute);
     if (!card.chips.empty()) {
         Rid chips = Rwidget_add_child(col, Rwidget_create(R_WIDGET_WRAP_BOX));
         Rpanel_set_spacing(chips, 5);
@@ -777,6 +801,8 @@ void WorkbenchView::reportLayout() const {
     std::printf("send-at %.0f %.0f\n", static_cast<double>(x), static_cast<double>(y));
     centre(find("composer"), x, y);
     std::printf("composer-at %.0f %.0f\n", static_cast<double>(x), static_cast<double>(y));
+    centre(find("harness.chip"), x, y);
+    std::printf("harness-chip-at %.0f %.0f\n", static_cast<double>(x), static_cast<double>(y));
     std::fflush(stdout);
 }
 
