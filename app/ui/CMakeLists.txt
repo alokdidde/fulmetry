@@ -32,13 +32,19 @@ if(FULMETRY_WITH_RAVEN_GUI)
 
   add_subdirectory(spike)
 
-  add_library(fulmetry_ui_raven STATIC raven/Kit.cpp raven/StageImage.cpp raven/WorkbenchView.cpp)
+  add_library(fulmetry_ui_raven STATIC raven/Kit.cpp raven/StageImage.cpp raven/WorkbenchView.cpp raven/LiveStage.cpp)
   target_include_directories(fulmetry_ui_raven PUBLIC raven)
   target_link_libraries(fulmetry_ui_raven PUBLIC fulmetry_ui raven::raven)
 
   add_executable(fulmetry_workbench raven/main.cpp)
   target_include_directories(fulmetry_workbench PRIVATE ${PROJECT_SOURCE_DIR}/app/tests)
-  target_link_libraries(fulmetry_workbench PRIVATE fulmetry_ui_raven fulmetry_project fulmetry_third_party)
+  # With FULMETRY_WITH_WICKED the stage is the live Wicked render (fulmetry_viewport defines FULMETRY_HAS_WICKED);
+  # without it, fulmetry_viewport is an interface target and the stage shows assets/stage/rover-highkey.png.
+  target_link_libraries(fulmetry_workbench PRIVATE fulmetry_ui_raven fulmetry_project fulmetry_viewport
+                                                   fulmetry_third_party)
+  if(FULMETRY_WITH_WICKED)
+    fulmetry_wicked_runtime(fulmetry_workbench)
+  endif()
   target_compile_definitions(fulmetry_workbench PRIVATE
     FULMETRY_UI_ASSETS="${CMAKE_CURRENT_SOURCE_DIR}/assets" FULMETRY_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
 
@@ -48,8 +54,9 @@ if(FULMETRY_WITH_RAVEN_GUI)
     add_test(NAME ui_workbench_headless
       COMMAND fulmetry_workbench --headless --strict --frames 120 --open menu --chat-left
               --select part:rover/camera-head)
+    # With Wicked the stage renders live (lavapipe), and the run continues past 120 frames until it has settled.
     set_tests_properties(ui_workbench_headless PROPERTIES
-      PASS_REGULAR_EXPRESSION "frames: 120, raven reports: 0, chat entries: 6, selection: part:rover/camera-head"
+      PASS_REGULAR_EXPRESSION "frames: [0-9]+, raven reports: 0, chat entries: 6, selection: part:rover/camera-head"
       ENVIRONMENT "RAVEN_LIVE_RELOAD=0")
   endif()
 endif()

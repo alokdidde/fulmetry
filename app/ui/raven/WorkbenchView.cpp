@@ -1,6 +1,8 @@
 #include "WorkbenchView.h"
 
+#include <algorithm>
 #include <cctype>
+#include <cmath>
 #include <cstdio>
 #include <ctime>
 
@@ -459,7 +461,7 @@ void WorkbenchView::buildMenu() {
     Rid kicker = eyebrow(head, part ? kindLabel(part->kind) : "Actions", 11);
     Rslot_set_valign(kicker, R_VALIGN_CENTER);
 
-    struct Item { const char* icon; const char* caption; const char* key; const char* action; };
+    struct Item { const char* icon; const char* caption; const char* key; const char* action; bool on = false; };
     auto group = [&](const char* title2, std::initializer_list<Item> items) {
         Rid g = vbox(body, 5);
         Rid t = eyebrow(g, title2, 11);
@@ -468,9 +470,10 @@ void WorkbenchView::buildMenu() {
         Runiform_grid_set_columns(grid, 4);
         Rpanel_set_spacing(grid, 4);
         for (const auto& it : items) {
-            Rid tile = border(grid, kHud2, 1, 6, 2, 8);
+            const uint32_t bg = it.on ? 0xFCEBEA : kHud2;
+            Rid tile = border(grid, bg, 1, 6, 2, 8);
             Rborder_set_padding(tile, 2, 8, 2, 6);
-            outline(tile, kLine);
+            outline(tile, it.on ? kAccent : kLine);
             Rwidget_set_min_size(tile, -1, 62);
             Rid col = vbox(tile, 4);
             Rid ic = icon(col, opt_.assets, it.icon);
@@ -489,18 +492,23 @@ void WorkbenchView::buildMenu() {
                     std::fflush(stdout);
                     setMenuOpen(false);
                     if (action == "all") model_.selectTab(0);
+                    if (action == "explode") model_.setExploded(!model_.exploded());
+                    if (action == "xray") model_.setXray(!model_.xray());
                     if (action == "open-chat") Rwidget_focus(find("composer"));
+                    if (actionHandler_) actionHandler_(action);
                 });
-            }, {kHud2, 0xECEFF2, 1, 1, true});
+            }, {bg, it.on ? 0xF9DEDCu : 0xECEFF2u, 1, 1, true});
         }
     };
+    const bool ex = model_.exploded(), xr = model_.xray();
+    const char* explodeCaption = ex ? "Assemble" : "Explode";
     if (part) {
         group("This part", {{"pin", "Comment here", "C", "pin-here"}, {"chat", "Ask in chat", "", "ask"},
-                            {"show", "Details", "", "details"}, {"explode", "Explode", "X", "explode"}});
+                            {"show", "Details", "", "details"}, {"explode", explodeCaption, "X", "explode", ex}});
     }
-    group("View", {{"explode", "Explode", "X", "explode"}, {"reset", "Reset view", "R", "reset-view"},
-                   {"joint", "Joints", "J", "joints"}, {"show", "Show hidden", "", "show-all"},
-                   {"cube", "All objects", "", "all"}});
+    group("View", {{"explode", explodeCaption, "X", "explode", ex}, {"xray", "X-ray", "", "xray", xr},
+                   {"reset", "Reset view", "R", "reset-view"}, {"joint", "Joints", "J", "joints"},
+                   {"show", "Show hidden", "", "show-all"}, {"cube", "All objects", "", "all", model_.activeTab() == 0}});
     group("Project", {{"plus", "New object", "N", "new"}, {"sim", "Simulate", "S", "sim"},
                       {"pin", "Pin comment", "C", "pin-mode"}, {"chat", "Open chat", "", "open-chat"}});
 }
@@ -512,7 +520,7 @@ void WorkbenchView::buildPin() {
     Rid body = find("pin.body");
     Rwidget_clear_children(body);
     const Comment* c = model_.openComment();
-    if (!c || !anchors_.count(c->anchor.part.value)) {
+    if (!c || (!pinLocator_ && !anchors_.count(c->anchor.part.value))) {
         Rwidget_set_visibility(pinW, R_HIDDEN);
         return;
     }
@@ -553,10 +561,86 @@ void WorkbenchView::buildPin() {
     Rwidget_set_visibility(pinW, R_VISIBLE);
 }
 
+void WorkbenchView::setPinLocator(PinLocator locator, std::function<std::optional<Rect>()> avoid) {
+    pinLocator_ = std::move(locator);
+    pinAvoid_ = std::move(avoid);
+    Rwidget_set_visibility(find("pin.stem"), pinLocator_ ? R_COLLAPSED : R_VISIBLE);
+    shownVersion_ = 0;
+}
+
+WorkbenchView::Rect WorkbenchView::freeStageRect() const {
+    float sx, sy, sw, sh;
+    Rwidget_get_rect(find("stage.area"), &sx, &sy, &sw, &sh);
+    Rect r{24, 24, sw - 24, sh - 24};
+    auto box = [&](const char* name, float& x0, float& y0, float& x1, float& y1) {
+        Rid w = find(name);
+        if (w == R_INVALID_ID || Rwidget_get_visibility(w) != R_VISIBLE) return false;
+        float x, y, ww, hh;
+        Rwidget_get_rect(w, &x, &y, &ww, &hh);
+        if (ww <= 0 || hh <= 0) return false;
+        x0 = x - sx, y0 = y - sy, x1 = x0 + ww, y1 = y0 + hh;
+        return true;
+    };
+    float x0, y0, x1, y1;
+    for (const char* top : {"topbar", "totals", "parts.button"})
+        if (box(top, x0, y0, x1, y1)) r.y0 = std::max(r.y0, y1 + 20);
+    for (const char* bottom : {"actions", "hint"})
+        if (box(bottom, x0, y0, x1, y1)) r.y1 = std::min(r.y1, y0 - 12);
+    if (box("inspector", x0, y0, x1, y1)) r.x1 = std::min(r.x1, x0 - 20);
+    return r;
+}
+
 void WorkbenchView::placePin() {
     Rid pinW = find("pin");
     const Comment* c = model_.openComment();
-    if (pinW == R_INVALID_ID || !c) return;
+    if (pinW == R_INVALID_ID || !c) {
+        stage_.setLeader(std::nullopt);
+        return;
+    }
+    if (pinLocator_) {
+        auto at = pinLocator_(*c);
+        if (!at) {
+            Rwidget_set_visibility(pinW, R_HIDDEN);
+            stage_.setLeader(std::nullopt);
+            return;
+        }
+        Rwidget_set_visibility(pinW, R_VISIBLE);
+        const float ax = at->first, ay = at->second;
+        float dw, dh, sx, sy, sw, sh;
+        Rwidget_get_desired_size(pinW, &dw, &dh);
+        Rwidget_get_rect(find("stage.area"), &sx, &sy, &sw, &sh);
+        // Up and to the right of the anchor, clear of the subject's screen box: beside it or above it, whichever
+        // keeps the leader shorter (beside for one object, above when All objects spreads them across the stage).
+        float x = ax + 40, y = ay - dh - 46;
+        if (auto avoid = pinAvoid_ ? pinAvoid_() : std::nullopt) {
+            float best = 1e9f;
+            auto consider = [&](float cx, float cy) {
+                if (cx < 16 || cx + dw > sw - 16 || cy < 70) return;
+                const float len = std::hypot(cx + 18 - ax, cy + dh - ay);
+                if (len < best) best = len, x = cx, y = cy;
+            };
+            consider(std::max(ax + 40, avoid->x1 + 24), ay - dh - 46);
+            consider(ax + 40, std::min(ay - dh - 46, avoid->y0 - 24 - dh));
+        }
+        x = std::clamp(x, 16.0f, std::max(16.0f, sw - dw - 16));
+        y = std::clamp(y, 70.0f, std::max(70.0f, sh - dh - 16));
+        // Never under a panel: lift the card above it, or failing that move it to the panel's left.
+        for (const char* name : {"inspector", "menu", "tray", "totals"}) {
+            Rid w = find(name);
+            if (w == R_INVALID_ID || Rwidget_get_visibility(w) != R_VISIBLE) continue;
+            float px, py, pw, ph;
+            Rwidget_get_rect(w, &px, &py, &pw, &ph);
+            px -= sx, py -= sy;
+            if (x > px + pw + 8 || x + dw < px - 8 || y > py + ph + 8 || y + dh < py - 8) continue;
+            if (py - dh - 16 >= 70) y = py - dh - 16;
+            else if (py + ph + 16 + dh <= sh - 16) y = py + ph + 16;
+            else x = std::max(16.0f, px - dw - 16);
+        }
+        Rslot_set_padding(pinW, x, y, 0, 0);
+        // The leader meets the card's lower edge a little in from the accent bar.
+        stage_.setLeader(StageImage::Leader{ax, ay, x + 18, y + dh});
+        return;
+    }
     auto it = anchors_.find(c->anchor.part.value);
     if (it == anchors_.end()) return;
     float ax, ay;

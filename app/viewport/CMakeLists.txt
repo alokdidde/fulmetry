@@ -37,10 +37,11 @@ target_include_directories(fulmetry_viewport SYSTEM PRIVATE ${WICKED_ROOT}/Wicke
 target_compile_definitions(fulmetry_viewport PUBLIC FULMETRY_HAS_WICKED=1)
 
 # Wicked compiles shaders at runtime with libdxcompiler.so, loaded from the executable's directory.
-set(FULMETRY_DXCOMPILER "${WICKED_ROOT}/WickedEngine/libdxcompiler.so")
+# fulmetry_wicked_runtime(<target>) works from any directory (app/ui's workbench uses it): WICKED_ROOT is a cache var.
 function(fulmetry_wicked_runtime target)
   add_custom_command(TARGET ${target} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${FULMETRY_DXCOMPILER} $<TARGET_FILE_DIR:${target}>)
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${WICKED_ROOT}/WickedEngine/libdxcompiler.so
+            $<TARGET_FILE_DIR:${target}>)
 endfunction()
 
 add_executable(fulmetry_wicked_spike spike/render_rover.cpp)

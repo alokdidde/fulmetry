@@ -28,15 +28,6 @@ bool writePpm(const Image& img, const std::string& path) {
     for (size_t i = 0; i < img.rgba.size(); i += 4) out.write(reinterpret_cast<const char*>(&img.rgba[i]), 3);
     return bool(out);
 }
-const char* stateName(AgentState s) {
-    switch (s) {
-        case AgentState::Starting: return "starting";
-        case AgentState::Working: return "working";
-        case AgentState::Done: return "done";
-        case AgentState::Failed: return "failed";
-    }
-    return "?";
-}
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -79,7 +70,7 @@ int main(int argc, char** argv) {
         agents.connect("fake://local");
         bus.subscribe([](const Event& e) {
             if (auto* a = std::get_if<AgentUpdated>(&e))
-                std::cout << "agent " << a->card.name << ": " << stateName(a->card.state) << " - " << a->card.step << "\n";
+                std::cout << "agent " << a->card.name << ": " << agentWireState(a->card) << " - " << a->card.step << "\n";
             if (auto* r = std::get_if<RevisionSaved>(&e)) std::cout << "revision r" << r->revision.number << " saved\n";
             if (auto* c = std::get_if<CheckUpdated>(&e)) std::cout << "check " << c->check.name << ": " << toName(c->check.verdict) << "\n";
             if (auto* c = std::get_if<CommentUpdated>(&e)) std::cout << "comment " << c->comment.id.value << ": " << toName(c->comment.status) << "\n";
