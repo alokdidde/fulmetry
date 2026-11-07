@@ -163,7 +163,10 @@ Options parse(int argc, char** argv) {
         o.simSetup = (res / "fixtures" / "rover" / "sim" / "living-room.json").string();
         // Wicked compiles its shaders on first use from the shipped sources and keeps them between runs.
         setDefaultEnv("FULMETRY_WICKED_SHADER_SOURCE", (res / "wicked-shaders").string());
-        setDefaultEnv("FULMETRY_WICKED_SHADER_CACHE", (userCacheDir() / "shaders").string());
+        // The Mac app ships its Metal shaders compiled (tools/package/macos.sh), so nothing compiles on first launch.
+        const auto shipped = res / "wicked-shaders-metal";
+        setDefaultEnv("FULMETRY_WICKED_SHADER_CACHE",
+                      (std::filesystem::exists(shipped) ? shipped : userCacheDir() / "shaders").string());
     }
     for (int i = 1; i < argc; ++i) {
         const std::string a = argv[i];

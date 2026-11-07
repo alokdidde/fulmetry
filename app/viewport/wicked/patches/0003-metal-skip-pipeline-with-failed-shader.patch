@@ -1,0 +1,20 @@
+diff --git a/WickedEngine/wiGraphicsDevice_Metal.cpp b/WickedEngine/wiGraphicsDevice_Metal.cpp
+index 765e753..180e560 100644
+--- a/WickedEngine/wiGraphicsDevice_Metal.cpp
++++ b/WickedEngine/wiGraphicsDevice_Metal.cpp
+@@ -2444,6 +2444,15 @@ using namespace metal_internal;
+ 	}
+ 	bool GraphicsDevice_Metal::CreatePipelineState(const PipelineStateDesc* desc, PipelineState* pso, const RenderPassInfo* renderpass_info) const
+ 	{
++		// Fulmetry patch: a shader that failed to compile has no internal state; building a pipeline from it crashed.
++		for (const Shader* shader : { desc->vs, desc->hs, desc->ds, desc->gs, desc->ps, desc->ms, desc->as })
++		{
++			if (shader != nullptr && !shader->IsValid())
++			{
++				wi::backlog::post("Metal pipeline skipped: one of its shaders failed to compile", wi::backlog::LogLevel::Error);
++				return false;
++			}
++		}
+ 		auto internal_state = wi::allocator::make_shared<PipelineState_Metal>();
+ 		internal_state->allocationhandler = allocationhandler;
+ 		pso->internal_state = internal_state;
