@@ -2,11 +2,13 @@
 //   fulmetry_wicked_spike <project.json> <out.png> [width height] [options]
 //     --meshes <dir>     parts without a meshFile use <dir>/<slug>.glb when it exists (stand-in meshes)
 //     --explode <0..1>   --select <part id>   --hover <part id>   --xray   --frames <n>   --no-warm
+//     --camera ex,ey,ez,tx,ty,tz   eye and target in mm (30 degree field of view) instead of the default view
 // Runs headless: Vulkan device without a window (lavapipe works), no swapchain. Prints frame times.
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
+#include <optional>
 #include <string>
 
 #include "fulmetry/project/ProjectIO.h"
@@ -26,6 +28,7 @@ int main(int argc, char** argv) {
         argi = 5;
     }
     std::string meshDir, select, hover;
+    std::optional<fulmetry::CameraState> camera;
     double explode = 0;
     bool xray = false, warm = true;
     fulmetry::viewport::WickedOptions opt;
@@ -38,6 +41,13 @@ int main(int argc, char** argv) {
         else if (!std::strcmp(argv[i], "--xray")) xray = true;
         else if (!std::strcmp(argv[i], "--frames")) opt.frames = std::atoi(next());
         else if (!std::strcmp(argv[i], "--no-warm")) warm = false;
+        else if (!std::strcmp(argv[i], "--camera")) {  // eye x,y,z,target x,y,z (mm)
+            fulmetry::CameraState c;
+            std::sscanf(next(), "%lf,%lf,%lf,%lf,%lf,%lf", &c.eye.x, &c.eye.y, &c.eye.z, &c.target.x, &c.target.y,
+                        &c.target.z);
+            c.fovDegrees = 30;
+            camera = c;
+        }
         else {
             std::fprintf(stderr, "unknown option %s\n", argv[i]);
             return 2;
@@ -68,6 +78,7 @@ int main(int argc, char** argv) {
     stage.showObject(project->objects.front().id);  // the rover alone
     stage.setExplode(explode);
     stage.resetView();  // frame what is visible, exploded or not
+    if (camera) stage.setCamera(*camera);
     if (!select.empty()) stage.setSelected(fulmetry::PartId{select});
     if (!hover.empty()) stage.setHovered(fulmetry::PartId{hover});
     stage.setXray(xray);

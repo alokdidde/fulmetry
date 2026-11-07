@@ -57,6 +57,15 @@ public:
     void update(double dtSeconds) override;
     Result<Image> renderToImage(int width, int height) override;
 
+    // Frames averaged by the next renderToImage (WickedOptions::frames): 1 while the camera moves (hard shadow),
+    // the default 8 once it rests.
+    void setSoftShadowFrames(int frames);
+    int softShadowFrames() const;
+    // Where resetView puts what is visible: a rectangle of the view in fractions (x right, y down), so a
+    // workbench can frame the subject in the space its floating panels leave free. `fill` is how much of that
+    // rectangle the subject's widest extent takes. Default: the whole view, 0.7.
+    void setFramingRect(double left, double top, double right, double bottom, double fill = 0.92);
+
     // Wall time of the last renderToImage frame loop, in milliseconds (all warm-up frames, GPU wait included).
     double lastRenderMs() const;
     // Parts drawn from their meshFile (the rest are boxes over Part.bounds), and why a meshFile was not used.

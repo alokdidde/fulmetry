@@ -45,7 +45,7 @@ constexpr float kKeyLightAngle = 0.08f;  // radians: angular radius of the key l
 constexpr XMFLOAT3 kKeyToLight{0.10f, 0.88f, -0.46f};  // Wicked space (x, up, depth), points towards the light
 constexpr XMFLOAT3 kFillToLight{0.60f, 0.40f, 1.00f};
 constexpr float kKeyIntensity = 6.0f, kFillIntensity = 1.1f;
-constexpr float kSky = 0.35f, kAmbient = 0.05f;
+constexpr float kSky = 0.26f, kAmbient = 0.05f;  // M1: 0.35 -> 0.26 for a ground shadow that reads at 1440 x 900
 constexpr float kExposure = 1.0f, kBrightness = 0.012f;
 constexpr float kShadowFilterRadius = 2.0f;  // PCF spread per frame; the frame average does the real softening
 constexpr float kAORange = 0.3f, kAOPower = 1.6f;
@@ -106,6 +106,10 @@ private:
         wi::initializer::InitializeComponentsImmediate();
         wi::renderer::SetShadowProps2D(2048);
         wi::renderer::SetScreenSpaceShadowsEnabled(true);  // contact shadows where parts meet each other and the ground
+        // GPU occlusion culling decides from earlier frames' queries. A live stage renders on demand, so those
+        // results are stale: after some camera, selection and hover sequences it culled the ground (the grey
+        // sky showed instead). The stage is a few dozen objects; draw them all.
+        wi::renderer::SetOcclusionCullingEnabled(false);
         // Object pipelines compile on low-priority background jobs and draws are skipped until they exist.
         // A one-shot render must wait for them; they are published to the renderer at the thread-safe point.
         while (wi::renderer::IsPipelineCreationActive() > 0) std::this_thread::sleep_for(std::chrono::milliseconds(20));
@@ -135,6 +139,8 @@ struct WickedViewport::Impl {
     CameraState cam;
     int width = 1280, height = 800;
     double lastMs = 0;
+    std::array<double, 4> framing{0, 0, 1, 1};  // resetView's rectangle (fractions of the view) and fill
+    double framingFill = 0.7;
 
     // Geometry, loaded with the project (no GPU needed).
     std::map<PartId, std::shared_ptr<const MeshAsset>> meshes;
@@ -156,7 +162,8 @@ struct WickedViewport::Impl {
     }
     Vec3 objectOffset(const ObjectId& id) const {
         for (size_t i = 0; i < project.objects.size(); ++i)
-            if (project.objects[i].id == id) return {double(i) * 250.0, 0, 0};
+            // All objects: side by side across the default 3/4 view (its screen-right axis), 230 mm apart.
+            if (project.objects[i].id == id) return {double(i) * -195.0, double(i) * 121.0, 0};
         return {};
     }
     Vec3 objectCenter(const ObjectId& id) const {
@@ -237,7 +244,11 @@ struct WickedViewport::Impl {
     }
     // Frames the visible parts in the default 3/4 view: the corners of every visible part's drawn bounds are
     // centred on screen and the widest fills `margin` of the frame.
-    void frameVisible(double margin = 0.7) {
+    void frameVisible() {
+        // The rectangle's half-size in NDC scales the fill; its centre is where the subject lands.
+        const double hw = std::clamp(framing[2] - framing[0], 0.05, 1.0), hh = std::clamp(framing[3] - framing[1], 0.05, 1.0);
+        const double cx = framing[0] + framing[2] - 1, cy = 1 - (framing[1] + framing[3]);
+        const double mx = framingFill * hw, my = framingFill * hh;
         auto b = visibleBounds();
         cam = CameraState{};
         cam.fovDegrees = 30;
@@ -261,8 +272,8 @@ struct WickedViewport::Impl {
             for (const Vec3& c : pts) {
                 Vec3 v = c - cam.target;
                 double along = v.dot(dir);
-                dist = std::max({dist, along + std::abs(v.dot(r)) / (margin * th * aspect),
-                                 along + std::abs(v.dot(u)) / (margin * th)});
+                dist = std::max({dist, along + std::abs(v.dot(r)) / (mx * th * aspect),
+                                 along + std::abs(v.dot(u)) / (my * th)});
             }
             double lo[2] = {1e9, 1e9}, hi[2] = {-1e9, -1e9};
             for (const Vec3& c : pts) {
@@ -273,6 +284,11 @@ struct WickedViewport::Impl {
             }
             cam.target = cam.target + r * ((lo[0] + hi[0]) * 0.5 * dist) + u * ((lo[1] + hi[1]) * 0.5 * dist);
         }
+        // Off-centre framing: move the camera sideways so the subject's centre lands on the rectangle's centre.
+        cam.eye = cam.target + dir * dist;
+        auto [fwd, right, up] = basis();
+        (void)fwd;
+        cam.target = cam.target - right * (cx * th * aspect * dist) - up * (cy * th * dist);
         cam.eye = cam.target + dir * dist;
     }
 
@@ -440,7 +456,7 @@ struct WickedViewport::Impl {
             path = std::make_unique<wi::RenderPath3D>();
             path->camera = &wcam;
             path->setMSAASampleCount(uint32_t(std::max(1, options.msaa)));
-            path->setOutlineColor(XMFLOAT4(0.10f, 0.10f, 0.12f, 1));
+            path->setOutlineColor(XMFLOAT4(0.16f, 0.16f, 0.18f, 1));  // dark grey, not black: crisp without a cartoon line
             path->setOutlineThreshold(0.06f);
             path->setBloomEnabled(false);
             path->setEyeAdaptionEnabled(false);
@@ -602,12 +618,12 @@ struct WickedViewport::Impl {
         wi::renderer::BindCommonResources(cmd);
         const float px = float(target.desc.height) / 800.0f;
         if (hov)
-            wi::renderer::Postprocess_Outline(mask[1], cmd, 0.1f, 1.6f * px,
-                                              XMFLOAT4(kSelectColor[0], kSelectColor[1], kSelectColor[2], 0.55f));
+            wi::renderer::Postprocess_Outline(mask[1], cmd, 0.1f, 1.3f * px,
+                                              XMFLOAT4(kSelectColor[0], kSelectColor[1], kSelectColor[2], 0.5f));
         if (sel) {
             // A white halo under the red line keeps it readable on red parts and on dark outlines.
-            wi::renderer::Postprocess_Outline(mask[0], cmd, 0.1f, 4.6f * px, XMFLOAT4(1, 1, 1, 0.95f));
-            wi::renderer::Postprocess_Outline(mask[0], cmd, 0.1f, 2.6f * px,
+            wi::renderer::Postprocess_Outline(mask[0], cmd, 0.1f, 3.4f * px, XMFLOAT4(1, 1, 1, 0.95f));
+            wi::renderer::Postprocess_Outline(mask[0], cmd, 0.1f, 2.0f * px,
                                               XMFLOAT4(kSelectColor[0], kSelectColor[1], kSelectColor[2], 1.0f));
         }
         device->RenderPassEnd(cmd);
@@ -719,6 +735,14 @@ Result<Image> WickedViewport::renderToImage(int w, int h) {
     for (size_t i = 3; i < img.rgba.size(); i += 4) img.rgba[i] = 255;
     m.lastMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
     return img;
+}
+
+void WickedViewport::setSoftShadowFrames(int frames) { impl_->options.frames = std::clamp(frames, 1, 64); }
+int WickedViewport::softShadowFrames() const { return impl_->options.frames; }
+void WickedViewport::setFramingRect(double left, double top, double right, double bottom, double fill) {
+    impl_->framing = {std::clamp(left, 0.0, 1.0), std::clamp(top, 0.0, 1.0), std::clamp(right, 0.0, 1.0),
+                      std::clamp(bottom, 0.0, 1.0)};
+    impl_->framingFill = std::clamp(fill, 0.1, 1.0);
 }
 
 double WickedViewport::lastRenderMs() const { return impl_->lastMs; }
