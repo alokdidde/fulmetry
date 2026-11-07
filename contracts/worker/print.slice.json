@@ -1,7 +1,10 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "method": "print.slice",
+  "description": "Slices a printed part for the given material and returns the G-code file, print time, filament mass and layer count.",
   "since": "M4",
+  "timeoutMs": 600000,
+  "readOnly": false,
   "params": {
     "type": "object",
     "required": [
@@ -12,10 +15,12 @@
     "additionalProperties": false,
     "properties": {
       "projectRoot": {
-        "type": "string"
+        "type": "string",
+        "description": "Absolute path of the project root: the folder that holds fulmetry.project.json"
       },
       "part": {
-        "type": "string"
+        "type": "string",
+        "description": "Part id, part:<object>/<slug>, e.g. part:rover/wheel-l"
       },
       "material": {
         "enum": [
@@ -23,10 +28,12 @@
           "PETG",
           "ASA",
           "TPU 95A"
-        ]
+        ],
+        "description": "Filament; decides temperatures and density"
       },
       "layerHeightMm": {
-        "type": "number"
+        "type": "number",
+        "description": "Layer height in mm; the profile's default when left out"
       }
     }
   },

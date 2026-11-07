@@ -1,0 +1,6 @@
+{
+  "_doc": "rover-highkey.png: the approved prototype's high-key rover (three.js, default camera) rendered without its HUD, cropped to the 1088 x 900 stage of a 1440 x 900 window. Pins are where comment anchors land in this frame, in pixels, until the real viewport (S2) projects them.",
+  "pins": {
+    "part:rover/wheel-l": [706, 423]
+  }
+}

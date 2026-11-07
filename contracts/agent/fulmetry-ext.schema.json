@@ -1,175 +1,182 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fulmetry.dev/agent/fulmetry-ext.schema.json",
   "title": "Fulmetry extensions to the T3 Code wire protocol",
-  "description": "Sent as T3 Code thread metadata and server push events. v0 draft; S7 confirms against packages/contracts in M1.",
+  "description": "Effect RPC methods on T3 Code's /ws (a Request frame's tag is the method name, its payload the params) and the events the fulmetry.subscribe stream pushes. x-methods maps each method to its params and result. The client sends the extension version it speaks as fulmetryExt, both in T3's clientCapabilities query parameter and in fulmetry.subscribe; a server that does not speak it fails the subscribe.",
+  "x-fulmetryExtVersion": 1,
+  "x-methods": {
+    "fulmetry.subscribe": { "params": "#/$defs/subscribe", "stream": "#/$defs/event" },
+    "fulmetry.startAgentForComment": { "params": "#/$defs/startAgentForComment", "result": "#/$defs/agentStarted" },
+    "fulmetry.sendChat": { "params": "#/$defs/sendChat", "result": "#/$defs/chatStarted" },
+    "fulmetry.reply": { "params": "#/$defs/reply", "result": "#/$defs/empty" },
+    "fulmetry.respondToApproval": { "params": "#/$defs/respondToApproval", "result": "#/$defs/empty" },
+    "fulmetry.stopAgent": { "params": "#/$defs/stopAgent", "result": "#/$defs/empty" }
+  },
   "$defs": {
-    "anchor": {
-      "$ref": "../schemas/project.schema.json#/$defs/comment/properties/anchor"
+    "anchor": { "$ref": "../schemas/project.schema.json#/$defs/comment/properties/anchor" },
+    "objectId": { "$ref": "../schemas/project.schema.json#/$defs/objectId" },
+    "partId": { "$ref": "../schemas/project.schema.json#/$defs/partId" },
+    "commentId": { "type": "string", "pattern": "^cmt:" },
+    "agentId": { "type": "string", "minLength": 1, "description": "The T3 Code ThreadId of the agent's thread" },
+    "commandId": {
+      "type": "string", "minLength": 1,
+      "description": "Chosen by the client, unique per command; a repeated commandId returns the first answer and starts nothing"
+    },
+    "empty": { "type": "object", "additionalProperties": false },
+
+    "subscribe": {
+      "type": "object", "required": ["fulmetryExt", "projectRoot"],
+      "properties": {
+        "fulmetryExt": { "type": "integer", "minimum": 1, "description": "Extension version the client speaks; 1 here" },
+        "projectRoot": { "type": "string", "description": "Absolute path of the project whose events to push" }
+      }
     },
     "startAgentForComment": {
-      "type": "object",
-      "required": [
-        "type",
-        "commentId",
-        "anchor",
-        "text",
-        "projectRoot"
-      ],
+      "type": "object", "required": ["commandId", "commentId", "anchor", "text", "projectRoot", "baseRevision"],
       "properties": {
-        "type": {
-          "const": "fulmetry.startAgentForComment"
-        },
-        "commentId": {
-          "type": "string"
-        },
-        "anchor": {
-          "$ref": "#/$defs/anchor"
-        },
-        "text": {
-          "type": "string"
-        },
-        "projectRoot": {
-          "type": "string"
-        },
+        "commandId": { "$ref": "#/$defs/commandId" },
+        "commentId": { "$ref": "#/$defs/commentId" },
+        "objectId": { "$ref": "#/$defs/objectId" },
+        "anchor": { "$ref": "#/$defs/anchor" },
+        "text": { "type": "string", "minLength": 1 },
+        "projectRoot": { "type": "string" },
+        "baseRevision": { "type": "string", "minLength": 1, "description": "Commit sha the agent's worktree branches from" },
+        "provider": { "enum": ["raven", "claudeAgent"], "default": "raven" },
         "renderPng": {
-          "type": "string",
-          "contentEncoding": "base64"
+          "type": "string", "contentEncoding": "base64", "contentMediaType": "image/png", "maxLength": 5592408,
+          "description": "What the comment points at, as seen in the app; at most 4 MiB of PNG. Becomes an image attachment"
         }
       }
     },
-    "agentUpdated": {
-      "type": "object",
-      "required": [
-        "type",
-        "agentId",
-        "name",
-        "state",
-        "step"
-      ],
+    "agentStarted": {
+      "type": "object", "required": ["agentId", "threadId"],
+      "properties": { "agentId": { "$ref": "#/$defs/agentId" }, "threadId": { "type": "string", "minLength": 1 } }
+    },
+    "sendChat": {
+      "type": "object", "required": ["commandId", "text", "scope"],
       "properties": {
-        "type": {
-          "const": "fulmetry.agentUpdated"
-        },
-        "agentId": {
-          "type": "string"
-        },
-        "threadId": {
-          "type": "string"
-        },
-        "name": {
-          "type": "string"
-        },
+        "commandId": { "$ref": "#/$defs/commandId" },
+        "text": { "type": "string", "minLength": 1 },
+        "scope": { "enum": ["project", "object", "part", "simulation", "newObject"] },
+        "objectId": { "$ref": "#/$defs/objectId" },
+        "partId": { "$ref": "#/$defs/partId" }
+      }
+    },
+    "chatStarted": { "type": "object", "required": ["agentId"], "properties": { "agentId": { "$ref": "#/$defs/agentId" } } },
+    "reply": {
+      "type": "object", "required": ["agentId", "text"],
+      "description": "A new message on the agent's thread, in the same worktree; restarts the agent",
+      "properties": { "agentId": { "$ref": "#/$defs/agentId" }, "text": { "type": "string", "minLength": 1 } }
+    },
+    "respondToApproval": {
+      "type": "object", "required": ["agentId", "requestId", "decision"],
+      "properties": {
+        "agentId": { "$ref": "#/$defs/agentId" },
+        "requestId": { "type": "string", "minLength": 1, "description": "agentUpdated.pendingApproval.requestId" },
+        "decision": { "enum": ["accept", "acceptForSession", "decline", "cancel"] }
+      }
+    },
+    "stopAgent": {
+      "type": "object", "required": ["agentId"], "description": "Interrupts the agent's run; it ends in state stopped",
+      "properties": { "agentId": { "$ref": "#/$defs/agentId" } }
+    },
+
+    "event": {
+      "oneOf": [
+        { "$ref": "#/$defs/agentUpdated" }, { "$ref": "#/$defs/chatPosted" }, { "$ref": "#/$defs/commentUpdated" },
+        { "$ref": "#/$defs/revisionSaved" }, { "$ref": "#/$defs/checkUpdated" }, { "$ref": "#/$defs/jobProgress" },
+        { "$ref": "#/$defs/banner" }
+      ]
+    },
+    "agentUpdated": {
+      "type": "object", "required": ["type", "agentId", "name", "state", "step"],
+      "properties": {
+        "type": { "const": "fulmetry.agentUpdated" },
+        "agentId": { "$ref": "#/$defs/agentId" },
+        "name": { "type": "string" },
         "state": {
-          "enum": [
-            "starting",
-            "working",
-            "done",
-            "failed"
-          ]
+          "enum": ["starting", "working", "waiting", "stopped", "done", "failed"],
+          "description": "waiting: pendingApproval is set; stopped: ended by stopAgent"
         },
-        "step": {
-          "type": "string"
+        "step": { "type": "string" },
+        "preview": { "type": "string" },
+        "parts": { "type": "array", "items": { "$ref": "#/$defs/partId" } },
+        "replies": { "type": "integer", "minimum": 0 },
+        "commentId": { "$ref": "#/$defs/commentId" },
+        "pendingApproval": {
+          "type": "object", "required": ["requestId", "title"],
+          "properties": { "requestId": { "type": "string", "minLength": 1 }, "title": { "type": "string" } }
         },
-        "preview": {
-          "type": "string"
-        },
-        "parts": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "replies": {
-          "type": "integer"
-        },
-        "commentId": {
-          "type": "string"
-        }
+        "provider": { "enum": ["raven", "claudeAgent"] },
+        "branch": { "type": "string" },
+        "worktreePath": { "type": "string" },
+        "revision": { "type": "integer", "minimum": 1, "description": "Number of the revision its work was saved as" }
+      }
+    },
+    "chatPosted": {
+      "type": "object", "required": ["type", "author", "text"],
+      "properties": {
+        "type": { "const": "fulmetry.chatPosted" },
+        "author": { "type": "string" },
+        "text": { "type": "string" },
+        "agentId": { "$ref": "#/$defs/agentId" }
+      }
+    },
+    "commentUpdated": {
+      "type": "object", "required": ["type", "commentId", "status"],
+      "properties": {
+        "type": { "const": "fulmetry.commentUpdated" },
+        "commentId": { "$ref": "#/$defs/commentId" },
+        "status": { "enum": ["open", "working", "resolved"] },
+        "agentId": { "$ref": "#/$defs/agentId" },
+        "reply": { "type": "string" }
       }
     },
     "revisionSaved": {
-      "type": "object",
-      "required": [
-        "type",
-        "number",
-        "sha"
-      ],
+      "type": "object", "required": ["type", "number", "sha"],
       "properties": {
-        "type": {
-          "const": "fulmetry.revisionSaved"
-        },
-        "number": {
-          "type": "integer"
-        },
-        "sha": {
-          "type": "string"
-        },
-        "summary": {
-          "type": "string"
-        },
-        "changedParts": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        }
+        "type": { "const": "fulmetry.revisionSaved" },
+        "number": { "type": "integer", "minimum": 1 },
+        "sha": { "type": "string" },
+        "parentSha": { "type": "string" },
+        "branch": { "type": "string" },
+        "summary": { "type": "string" },
+        "changedParts": { "type": "array", "items": { "$ref": "#/$defs/partId" } },
+        "agentId": { "$ref": "#/$defs/agentId" },
+        "commentId": { "$ref": "#/$defs/commentId" }
       }
     },
     "checkUpdated": {
-      "type": "object",
-      "required": [
-        "type",
-        "checkId",
-        "verdict"
-      ],
+      "type": "object", "required": ["type", "checkId", "objectId", "name", "verdict"],
+      "description": "The whole check, as in the manifest",
       "properties": {
-        "type": {
-          "const": "fulmetry.checkUpdated"
-        },
-        "checkId": {
-          "type": "string"
-        },
-        "verdict": {
-          "enum": [
-            "supported",
-            "refuted",
-            "unresolved"
-          ]
-        },
-        "reason": {
-          "type": "string"
-        }
+        "type": { "const": "fulmetry.checkUpdated" },
+        "checkId": { "type": "string", "pattern": "^chk:" },
+        "objectId": { "$ref": "#/$defs/objectId" },
+        "name": { "type": "string" },
+        "verdict": { "enum": ["supported", "refuted", "unresolved"] },
+        "reason": { "type": "string" },
+        "inputs": { "type": "array", "items": { "$ref": "#/$defs/partId" } },
+        "inputHashes": { "type": "object", "additionalProperties": { "type": "string" } }
       }
     },
     "jobProgress": {
-      "type": "object",
-      "required": [
-        "type",
-        "jobId",
-        "fraction"
-      ],
+      "type": "object", "required": ["type", "jobId", "fraction"],
       "properties": {
-        "type": {
-          "const": "fulmetry.jobProgress"
-        },
-        "jobId": {
-          "type": "string"
-        },
-        "title": {
-          "type": "string"
-        },
-        "fraction": {
-          "type": "number",
-          "minimum": 0,
-          "maximum": 1
-        },
-        "message": {
-          "type": "string"
-        },
-        "done": {
-          "type": "boolean"
-        }
+        "type": { "const": "fulmetry.jobProgress" },
+        "jobId": { "type": "string" },
+        "agentId": { "$ref": "#/$defs/agentId" },
+        "title": { "type": "string" },
+        "fraction": { "type": "number", "minimum": 0, "maximum": 1 },
+        "message": { "type": "string" },
+        "done": { "type": "boolean" },
+        "failed": { "type": "boolean", "description": "With done: the job ended in an error, message says why" }
       }
+    },
+    "banner": {
+      "type": "object", "required": ["type", "text"],
+      "description": "Optional; the server may never send one. Provider unavailable, Raven not configured, server restarting",
+      "properties": { "type": { "const": "fulmetry.banner" }, "text": { "type": "string", "minLength": 1 } }
     }
   }
 }
