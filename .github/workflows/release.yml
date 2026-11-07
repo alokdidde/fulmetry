@@ -86,7 +86,12 @@ jobs:
             -framework Metal -framework MetalKit -framework MetalFX -framework QuartzCore -framework Foundation \
             -framework AppKit -framework GameController -framework IOKit -framework CoreHaptics -framework AudioToolbox \
             -framework CoreAudio -framework AVFoundation -framework UniformTypeIdentifiers -o "$out/offlineshadercompiler"
-          cd "$out" && ./offlineshadercompiler metal quiet
+          cd "$out"
+          ./offlineshadercompiler metal > compile.log 2>&1 || { grep -iE "error|fail" compile.log | head -80; exit 1; }
+          tail -3 compile.log
+          n=$(find shaders/metal -name "*.cso" | wc -l | tr -d " ")
+          echo "compiled $n Metal shaders"
+          test "$n" -ge 300
       - name: Smoke run (null window)
         timeout-minutes: 25
         # The UI runs on Raven's null backend. Wicked's Metal backend needs Metal 4, which the hosted runners' virtual
