@@ -1,0 +1,21 @@
+{
+  "_doc": "Sample project chat for the workbench until the agent bridge (S7) streams the real one. Chips name parts of fixtures/rover/fulmetry.project.json.",
+  "entries": [
+    { "author": "You", "time": "09:58", "text": "Add a wireless remote so I can drive it from the sofa.", "sentToAgent": true },
+    { "author": "Claude", "time": "09:58", "text": "Started an agent for this.",
+      "agent": { "id": "agent:remote", "title": "Add a wireless remote", "done": true, "color": "#14a86b",
+                 "preview": "Added a second object, the Wireless remote: ESP32-C3, a thumb joystick, two buttons and an OLED screen.",
+                 "chips": [ "part:remote/joystick", { "part": "part:remote/screen", "label": "Screen" } ], "replies": 1 } },
+    { "author": "You", "time": "10:05", "text": "Make the head sit a bit higher so the camera clears the shell.",
+      "chips": [ "part:rover/camera-head" ], "sentToAgent": true },
+    { "author": "Claude", "time": "10:05", "text": "Started an agent for this.",
+      "agent": { "id": "agent:head", "title": "Raise the camera head", "done": true, "color": "#4b9cf5",
+                 "preview": "Raised the head 12 mm on a taller servo mount (r3).",
+                 "chips": [ "part:rover/pan-servo", "part:rover/camera-head" ], "replies": 1 } },
+    { "kind": "divider", "text": "Revision r3 saved" },
+    { "author": "Claude", "time": "10:40", "text": "r3 changed the geometry, so I started an agent to re-run the simulation.",
+      "agent": { "id": "agent:sim", "title": "Living-room simulation", "done": true, "color": "#b07ce8",
+                 "preview": "Rug test refuted: the Ø60 mm wheels stall on 8 mm pile. The grip check on the remote passed.",
+                 "chips": [ { "part": "part:rover/wheel-l", "label": "Wheels ×2" }, "part:remote/shell" ], "replies": 1 } }
+  ]
+}

@@ -1,10 +1,22 @@
-# Owner: S5 Workbench UI. Real implementation builds when FULMETRY_WITH_RAVEN_GUI is ON; until then the app uses the fake.
-add_library(fulmetry_ui INTERFACE)
-target_link_libraries(fulmetry_ui INTERFACE fulmetry_core)
+# Owner: S5 Workbench UI.
+# fulmetry_ui: what the workbench shows (WorkbenchModel), GUI-free, always built and unit-tested.
+# With FULMETRY_WITH_RAVEN_GUI=ON: fulmetry_ui_raven (the Raven view) and fulmetry_workbench (the shell).
+add_library(fulmetry_ui STATIC src/WorkbenchModel.cpp)
+target_include_directories(fulmetry_ui PUBLIC include)
+target_link_libraries(fulmetry_ui PUBLIC fulmetry_core PRIVATE fulmetry_third_party)
+
+if(FULMETRY_BUILD_TESTS)
+  enable_testing()
+  add_executable(fulmetry_ui_tests tests/test_workbench_model.cpp)
+  target_include_directories(fulmetry_ui_tests PRIVATE ${PROJECT_SOURCE_DIR}/app/tests)
+  target_link_libraries(fulmetry_ui_tests PRIVATE fulmetry_ui fulmetry_project fulmetry_third_party)
+  target_compile_definitions(fulmetry_ui_tests PRIVATE FULMETRY_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+  add_test(NAME ui_model_tests COMMAND fulmetry_ui_tests)
+endif()
 
 if(FULMETRY_WITH_RAVEN_GUI)
   # Raven GUI (github.com/oscar-soirey/Raven, Apache-2.0) from a source checkout outside the repo.
-  # The commit the spike was measured on is pinned in docs/streams/s5.md.
+  # The pinned commit is in docs/streams/s5.md.
   set(RAVEN_GUI_ROOT "" CACHE PATH "Path to a Raven GUI source checkout (github.com/oscar-soirey/Raven)")
   if(NOT EXISTS "${RAVEN_GUI_ROOT}/include/Raven.h")
     message(FATAL_ERROR "FULMETRY_WITH_RAVEN_GUI=ON needs RAVEN_GUI_ROOT pointing at a Raven checkout")
