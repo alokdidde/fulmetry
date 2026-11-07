@@ -118,8 +118,13 @@ void WorkbenchView::bindStatic() {
     bindHarness();
     onClick(find("send"), [this] { post([this] { send(); }); },
             {kAccent, 0xD12A25, 1, 1, true});
-    onClick(find("simulate"), [this] { post([] { std::printf("action: simulate\n"); std::fflush(stdout); }); },
-            {kAccent, 0xD12A25, 1, 1, true});
+    onClick(find("simulate"), [this] {
+        post([this] {
+            std::printf("action: simulate\n");
+            std::fflush(stdout);
+            if (simulateHandler_) simulateHandler_();
+        });
+    }, {kAccent, 0xD12A25, 1, 1, true});
     onClick(find("parts.button"), [this] { post([this] { setTrayOpen(!trayOpen_); }); });
     onClick(find("actions"), [this] { post([this] { setMenuOpen(!menuOpen_); }); });
     onClick(find("chat.side"), [this] { post([this] { setChatLeft(!chatLeft_); }); },
@@ -130,6 +135,7 @@ void WorkbenchView::bindStatic() {
             auto* v = static_cast<WorkbenchView*>(user);
             v->post([v] {
                 if (v->pickerOpen_) v->setPickerOpen(false);
+                else if (v->simulating_ && v->simulateHandler_) v->simulateHandler_();
                 else if (v->onboardOpen_) {
                     if (!v->model_.needsOnboarding()) v->setOnboardOpen(false);
                 } else if (v->menuOpen_) v->setMenuOpen(false);
@@ -203,6 +209,50 @@ void WorkbenchView::selectPart(const PartId& part) {
             std::fflush(stdout);
         }
     });
+}
+
+void WorkbenchView::setSimulateButton(bool stop) {
+    Rid b = find("simulate");
+    if (b == R_INVALID_ID || Rwidget_get_child_count(b) == 0) return;
+    Rid row = Rwidget_get_child(b, 0);
+    Rwidget_clear_children(row);
+    icon(row, opt_.assets, stop ? "stop" : "play");
+    Rid l = label(row, stop ? "Stop" : "Simulate", fonts_.semibold, 13, kHud);
+    Rslot_set_valign(l, R_VALIGN_CENTER);
+}
+
+void WorkbenchView::setSimulating(bool on) {
+    simulating_ = on;
+    if (on) {
+        setTrayOpen(false);
+        setMenuOpen(false);
+    }
+    setSimulateButton(on);
+    Rwidget_set_visibility(find("drive"), on ? R_VISIBLE : R_COLLAPSED);
+    Rwidget_set_visibility(find("parts.button"), on ? R_COLLAPSED : R_VISIBLE);
+    Rwidget_set_visibility(find("actions"), on ? R_COLLAPSED : R_VISIBLE);
+    setText(find("hint"), on ? "**W/S** drive \xC2\xB7 **A/D** steer \xC2\xB7 **R** restart \xC2\xB7 **Esc** stop  \n"
+                               "**Drag** to orbit \xC2\xB7 **wheel** to zoom"
+                             : "**Drag** to orbit \xC2\xB7 **right-drag** to pan \xC2\xB7 **wheel** to zoom  \n"
+                               "**Click** a part to select it \xC2\xB7 **right-click** for its actions");
+    shownVersion_ = 0;  // the inspector and the pin follow on the next sync
+    std::printf("simulate %s\n", on ? "on" : "off");
+    std::fflush(stdout);
+}
+
+void WorkbenchView::askAbout(const PartId& part, const std::string& text) {
+    model_.selectPart(part);
+    auto req = model_.compose(text, now());
+    if (!req.ok()) {
+        if (req.error().code == "no_harness") setOnboardOpen(true);
+        return;
+    }
+    std::printf("chat sent: \"%s\" on %s/%s\n", req->text.c_str(), req->provider.c_str(), req->model.c_str());
+    std::fflush(stdout);
+    if (agent_) {
+        auto started = agent_->sendChat(req.value());
+        if (!started.ok()) std::fprintf(stderr, "workbench: agent: %s\n", started.error().message.c_str());
+    }
 }
 
 // ------------------------------------------------------------------ frame
@@ -372,7 +422,7 @@ void WorkbenchView::buildInspector() {
     Rid panel = find("inspector");
     Rid body = find("inspector.body");
     Rwidget_clear_children(body);
-    Rwidget_set_visibility(panel, inspectorOpen_ ? R_VISIBLE : R_COLLAPSED);
+    Rwidget_set_visibility(panel, inspectorOpen_ && !simulating_ ? R_VISIBLE : R_COLLAPSED);
     const Project& p = model_.project();
 
     auto header = [&](const std::string& kicker, const std::string& title, const std::string& sub) {
@@ -510,6 +560,7 @@ void WorkbenchView::buildMenu() {
                     if (action == "explode") model_.setExploded(!model_.exploded());
                     if (action == "xray") model_.setXray(!model_.xray());
                     if (action == "open-chat") Rwidget_focus(find("composer"));
+                    if (action == "sim" && simulateHandler_) simulateHandler_();
                     if (actionHandler_) actionHandler_(action);
                 });
             }, {bg, it.on ? 0xF9DEDCu : 0xECEFF2u, 1, 1, true});
@@ -535,7 +586,7 @@ void WorkbenchView::buildPin() {
     Rid body = find("pin.body");
     Rwidget_clear_children(body);
     const Comment* c = model_.openComment();
-    if (!c || (!pinLocator_ && !anchors_.count(c->anchor.part.value))) {
+    if (!c || simulating_ || (!pinLocator_ && !anchors_.count(c->anchor.part.value))) {
         Rwidget_set_visibility(pinW, R_HIDDEN);
         return;
     }
@@ -616,7 +667,7 @@ WorkbenchView::Rect WorkbenchView::freeStageRect() const {
 void WorkbenchView::placePin() {
     Rid pinW = find("pin");
     const Comment* c = model_.openComment();
-    if (pinW == R_INVALID_ID || !c) {
+    if (pinW == R_INVALID_ID || !c || simulating_) {
         stage_.setLeader(std::nullopt);
         return;
     }

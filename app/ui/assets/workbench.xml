@@ -83,6 +83,11 @@
 				<VBox Name="inspector.body" Spacing="12"/>
 			</Panel>
 
+			<!-- drive-test card in Simulate mode, where the inspector is (filled by SimulateMode) -->
+			<Panel Name="drive" Pad="14,14,14,16" Width="340" Visibility="Collapsed" Slot.HAlign="Right" Slot.VAlign="Bottom" Slot.Padding="0,0,16,16">
+				<VBox Name="drive.body" Spacing="12"/>
+			</Panel>
+
 			<!-- gestures hint, bottom left -->
 			<Label Name="hint" Markdown="true" TextSize="11.5" Color="#5D6670" Slot.HAlign="Left" Slot.VAlign="Bottom" Slot.Padding="16,0,0,16" HitTestable="false"/>
 

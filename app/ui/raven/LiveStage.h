@@ -43,6 +43,11 @@ public:
     void attach();
     // Every frame, after view.update(): applies the model, renders when something changed.
     void update(double now);
+    // Simulate mode: the simulation owns what is shown and the camera, so the object tabs, explode and fitting
+    // the view wait; leaving it shows the model's view again.
+    void setSimulating(bool on);
+    // The scene moved (a simulation step): renders a quick frame now and a resting one once it stops.
+    void invalidate() { changed(); }
     // Nothing changed since the last resting render.
     bool settled() const { return settled_; }
 
@@ -78,7 +83,7 @@ private:
     Options opt_;
 
     double now_ = 0, lastChange_ = 0;
-    bool dirty_ = true, settled_ = false, needFit_ = true;
+    bool dirty_ = true, settled_ = false, needFit_ = true, simulating_ = false;
     int width_ = 0, height_ = 0;  // stage in pixels: the viewport's size
     float scale_ = 1;             // pixels per stage unit
 

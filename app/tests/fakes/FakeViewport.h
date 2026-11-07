@@ -42,10 +42,16 @@ public:
     void setJointsVisible(bool on) override { joints_ = on; }
     void setStyle(StageStyle style) override { style_ = style; }
     void setSlicePlane(const std::optional<double>& h) override { slice_ = h; }
+    void setEnvironment(const std::optional<StageEnvironment>& env) override { environment_ = env; }
+    void setPartPose(const PartId& part, const std::optional<Transform>& pose) override {
+        if (pose) poses_[part] = *pose; else poses_.erase(part);
+    }
+    const std::optional<StageEnvironment>& environment() const { return environment_; }
 
     Transform drawnPlacement(const PartId& part) const override {
         const Part* p = project_.findPart(part);
         if (!p) return {};
+        if (auto it = poses_.find(part); it != poses_.end()) return it->second;
         Transform t = p->placement;
         t.position = objectOffset(objectOf(part)) + t.position;
         if (explode_ > 0) {
@@ -208,6 +214,8 @@ private:
     std::optional<double> slice_;
     CameraState camera_;
     int width_ = 1280, height_ = 800;
+    std::optional<StageEnvironment> environment_;
+    std::map<PartId, Transform> poses_;
 };
 
 }  // namespace fulmetry::fakes

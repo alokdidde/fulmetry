@@ -64,6 +64,25 @@ inline void viewportConformance(const std::function<std::unique_ptr<IViewport>()
         v->setExplode(0.0);
         CHECK(v->drawnPlacement(p->id) == before);
     }
+    SUBCASE("a simulation pose moves a part, and clearing it puts the part back") {
+        const Part* p = project.allParts().front();
+        const Transform before = v->drawnPlacement(p->id);
+        Transform pose;
+        pose.position = {1234, -567, 30};
+        pose.rotation = {0.7071067811865476, 0, 0, 0.7071067811865476};
+        StageEnvironment room;
+        room.floorColor = "#c9a47e";
+        room.props.push_back({"Rug", {{300, -1000, 0}, {1500, 1000, 4}}, "#1e6fe8"});
+        v->setEnvironment(room);
+        v->setPartPose(p->id, pose);
+        CHECK(v->drawnPlacement(p->id) == pose);
+        v->setExplode(1.0);  // a posed part is where the physics says, exploded or not
+        CHECK(v->drawnPlacement(p->id) == pose);
+        v->setExplode(0.0);
+        v->setPartPose(p->id, std::nullopt);
+        v->setEnvironment(std::nullopt);
+        CHECK(v->drawnPlacement(p->id) == before);
+    }
     SUBCASE("render produces an image of the asked size with something drawn") {
         auto img = v->renderToImage(64, 40);
         REQUIRE(img.ok());

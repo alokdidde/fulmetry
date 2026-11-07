@@ -1,0 +1,30 @@
+<!-- Desk rover (Ø60 mm wheels, as fixtures/rover/fulmetry.project.json) in the living room of the UI spec's drive
+     test: wood floor, an 8 mm pile rug (compressed to 3 mm under the rover, see docs/streams/s4.md), a low brick
+     wall and a sofa. Hand-written for the first Simulate window; the worker generates it from the assembly in M4.
+     Keep the room in step with living-room.json, which draws it. -->
+<mujoco model="desk-rover-living-room">
+  <option timestep="0.002" integrator="implicitfast"/>
+  <worldbody>
+    <geom name="floor" type="plane" size="5 5 0.1" friction="0.8 0.005 0.0001"/>
+    <geom name="rug" type="box" pos="0.9 0 0.0015" size="0.6 1 0.0015" friction="1.4 0.02 0.002"/>
+    <geom name="wall" type="box" pos="2.55 -0.35 0.08" size="0.06 0.9 0.08"/>
+    <geom name="sofa" type="box" pos="0.9 1.75 0.21" size="1.0 0.45 0.21"/>
+    <body name="rover" pos="0 0 0.03">
+      <freejoint/>
+      <geom name="chassis" type="box" size="0.08 0.06 0.02" mass="0.25"/>
+      <body name="wheel_l_body" pos="0 0.068 0">
+        <joint name="wheel_l_joint" type="hinge" axis="0 1 0"/>
+        <geom name="wheel_l" type="cylinder" size="0.03 0.007" euler="90 0 0" mass="0.018"/>
+      </body>
+      <body name="wheel_r_body" pos="0 -0.068 0">
+        <joint name="wheel_r_joint" type="hinge" axis="0 1 0"/>
+        <geom name="wheel_r" type="cylinder" size="0.03 0.007" euler="90 0 0" mass="0.018"/>
+      </body>
+      <geom name="caster" type="sphere" pos="-0.065 0 -0.022" size="0.008" mass="0.006"/>
+    </body>
+  </worldbody>
+  <actuator>
+    <velocity name="drive_l" joint="wheel_l_joint" kv="0.05" ctrlrange="-16.755 16.755"/>
+    <velocity name="drive_r" joint="wheel_r_joint" kv="0.05" ctrlrange="-16.755 16.755"/>
+  </actuator>
+</mujoco>

@@ -5,6 +5,7 @@
 //                      [--explode] [--xray] [--orbit DX,DY] [--zoom N] [--still] [--interactive-scale S]
 //                      [--frames N] [--run-seconds S] [--shot out.png] [--headless] [--strict]
 //                      [--harnesses fresh|some|all] [--open onboard|picker] [--onboard <harness id>] [--do <command>]...
+//                      [--simulate [setup.json]] [--sim-seconds T] [--sim-drive THROTTLE,STEER]
 //
 // Built with FULMETRY_WITH_WICKED, the stage is the live Wicked render of the project (LiveStage); --still
 // shows the pre-rendered image instead, which is all a build without Wicked has. --shot waits for the stage's
@@ -16,6 +17,10 @@
 // --do runs a harness command once the window is up, as its button would (WorkbenchView::harnessCommand), e.g.
 // --do signin:codex. The chosen harness and model are kept in settings.json under FULMETRY_CONFIG_DIR, else
 // $XDG_CONFIG_HOME/fulmetry or ~/.config/fulmetry (%APPDATA%\Fulmetry on Windows).
+// Simulate (the button, or --simulate at start) drives the object in a room: fixtures/rover/sim/living-room.json by
+// default, on MuJoCo when this build has it (FULMETRY_WITH_MUJOCO), else on the kinematic fake. --sim-seconds steps
+// the physics to that time as fast as it can and holds there, for screenshots; --sim-drive replaces the scripted
+// drive with that input.
 #include <Raven.h>
 
 #include <chrono>
@@ -42,11 +47,16 @@
 #endif
 
 #include "LiveStage.h"
+#include "SimulateMode.h"
 #include "WorkbenchView.h"
 #include "fakes/FakeAgentClient.h"
+#include "fakes/FakeSimulation.h"
 #include "fulmetry/project/ProjectIO.h"
 #if defined(FULMETRY_HAS_WICKED)
 #include "fulmetry/viewport/WickedViewport.h"
+#endif
+#if defined(FULMETRY_HAS_MUJOCO)
+#include "fulmetry/sim/MujocoSimulation.h"
 #endif
 
 #ifndef FULMETRY_UI_ASSETS
@@ -69,6 +79,11 @@ struct Options {
     std::string harnesses = "some";
     std::string onboard;
     std::vector<std::string> commands;
+    std::string simSetup = FULMETRY_SOURCE_DIR "/fixtures/rover/sim/living-room.json";
+    bool simulate = false;
+    double simSeconds = 0;
+    bool simDrive = false;
+    double simThrottle = 0, simSteer = 0;
     int width = 0, height = 0;
     int frames = 0;          // quit after this many frames (0: run until closed or --run-seconds)
     double runSeconds = 0;
@@ -110,7 +125,13 @@ Options parse(int argc, char** argv) {
         else if (a == "--harnesses") o.harnesses = next();
         else if (a == "--onboard") o.onboard = next();
         else if (a == "--do") o.commands.push_back(next());
-        else if (a == "--frames") o.frames = std::atoi(next().c_str());
+        else if (a == "--simulate") {
+            o.simulate = true;
+            if (i + 1 < argc && argv[i + 1][0] != '-') o.simSetup = next();
+        } else if (a == "--sim-seconds") o.simSeconds = std::atof(next().c_str());
+        else if (a == "--sim-drive") {
+            o.simDrive = std::sscanf(next().c_str(), "%lf,%lf", &o.simThrottle, &o.simSteer) >= 1;
+        } else if (a == "--frames") o.frames = std::atoi(next().c_str());
         else if (a == "--run-seconds") o.runSeconds = std::atof(next().c_str());
         else if (a == "--size") std::sscanf(next().c_str(), "%dx%d", &o.width, &o.height);
         else if (a == "--chat-left") o.chatLeft = true;
@@ -254,6 +275,29 @@ int main(int argc, char** argv) {
                 for (auto& [part, xy] : j["pins"].items())
                     if (xy.is_array() && xy.size() == 2) view.setPinAnchor(PartId(part), xy[0].get<float>(), xy[1].get<float>());
         }
+        // Simulate: the room and its physics, for the stage when it is live.
+        std::unique_ptr<ui::SimulateMode> sim;
+        if (viewport) {
+            namespace fs = std::filesystem;
+            auto setup = ui::parseSimSetup(slurp(o.simSetup), project.value());
+            if (!setup.ok()) {
+                std::fprintf(stderr, "simulate: %s: %s\n", o.simSetup.c_str(), setup.error().message.c_str());
+            } else {
+                ui::SimulateMode::Options so;
+                so.mjcf = slurp((fs::path(o.simSetup).parent_path() / setup->model).string());
+                so.fixedSeconds = o.simSeconds;
+#if defined(FULMETRY_HAS_MUJOCO)
+                std::unique_ptr<ISimulation> physics = sim::makeMujocoSimulation();
+                std::printf("simulate: MuJoCo\n");
+#else
+                std::unique_ptr<ISimulation> physics = std::make_unique<fakes::FakeSimulation>();
+                std::printf("simulate: kinematic fake (build with FULMETRY_WITH_MUJOCO for the physics)\n");
+#endif
+                sim = std::make_unique<ui::SimulateMode>(view, live.get(), *viewport, std::move(physics),
+                                                         std::move(setup.value()), so);
+                sim->attach();
+            }
+        }
         if (o.width > 0 && o.height > 0) Rwindow_set_size(view.window(), o.width, o.height);
         if (o.open == "tray") view.setTrayOpen(true);
         if (o.open == "menu") view.setMenuOpen(true);
@@ -261,15 +305,20 @@ int main(int argc, char** argv) {
             if (!view.harnessCommand(cmd)) std::fprintf(stderr, "harness command %s failed\n", cmd.c_str());
         if (o.open == "onboard" || !o.onboard.empty()) view.setOnboardOpen(true, o.onboard);
         if (o.open == "picker") view.setPickerOpen(true);
+        if (o.simulate) {
+            if (!sim) std::fprintf(stderr, "simulate: needs the live stage (a build with Wicked, without --still)\n");
+            else if (sim->start() && o.simDrive) sim->setDrive(DriveInput{o.simThrottle, o.simSteer});
+        }
         std::printf("workbench ready: %s, %zu chat entries\n", model.project().name.c_str(), model.chat().size());
         std::fflush(stdout);
 
         const auto start = std::chrono::steady_clock::now();
         int frame = 0;
         bool orbited = o.orbitX == 0 && o.orbitY == 0 && o.zoom == 0 && o.hover.empty();
-        while (o.headless ? Rdraw_frame() : Rwait_frame(0.05)) {
+        while (o.headless ? Rdraw_frame() : Rwait_frame(sim && sim->running() ? 1.0 / 120 : 0.05)) {
             const double t = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
             view.update(t);
+            if (sim) sim->update(t);
             if (!(model.preferredChoice() == savedChoice)) {
                 savedChoice = model.preferredChoice();
                 saveChoice(savedChoice);
@@ -290,6 +339,13 @@ int main(int argc, char** argv) {
             const bool stageReady = !live || (live->settled() && orbited) || t > 120;
             if (o.frames > 0 && frame >= o.frames && stageReady) break;
             if (o.runSeconds > 0 && t >= o.runSeconds) break;
+        }
+        if (sim && sim->running()) {
+            const auto& d = sim->drive();
+            std::printf("simulate: t %.2f s, %.2f m, at %.0f %.0f mm, speed %.2f m/s, on %s, battery %.2f%%\n", d.time(),
+                        d.distanceM(), d.position().x, d.position().y, d.speed(), d.surface().c_str(), d.batteryPct());
+            for (const auto& f : d.findings())
+                std::printf("finding %s (%s): %s\n", f.id.c_str(), f.good ? "good" : "bad", f.text.c_str());
         }
         if (live)
             std::printf("stage frame times: quick %.0f ms, resting %.0f ms\n", live->interactiveMs(), live->idleMs());
