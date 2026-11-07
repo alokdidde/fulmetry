@@ -1,7 +1,10 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "method": "project.validate",
+  "description": "Validates a project manifest against contracts/schemas/project.schema.json and lists every error with its JSON path.",
   "since": "M0",
+  "timeoutMs": 30000,
+  "readOnly": true,
   "params": {
     "type": "object",
     "required": [
@@ -10,7 +13,8 @@
     "additionalProperties": false,
     "properties": {
       "manifest": {
-        "type": "object"
+        "type": "object",
+        "description": "The manifest as JSON (the contents of fulmetry.project.json), not a path"
       }
     }
   },

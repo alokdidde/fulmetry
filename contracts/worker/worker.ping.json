@@ -1,7 +1,10 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "method": "worker.ping",
+  "description": "Health check: the worker's version, the engines it has installed and the methods it implements. Cheap; call it before relying on an engine.",
   "since": "M0",
+  "timeoutMs": 5000,
+  "readOnly": true,
   "params": {
     "type": "object",
     "additionalProperties": false,
@@ -22,6 +25,14 @@
         "additionalProperties": {
           "type": "string"
         }
+      },
+      "methods": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "uniqueItems": true,
+        "description": "Contract methods this worker implements; the others answer not implemented (-32001)"
       }
     }
   }
