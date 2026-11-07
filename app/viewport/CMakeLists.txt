@@ -1,4 +1,19 @@
 # Owner: S2 Viewport. Real implementation builds when FULMETRY_WITH_WICKED is ON; until then the app uses the fake.
+
+# Part meshes (glTF loading, box fallback, ray picking). No GPU and no Wicked, so it builds and is tested everywhere.
+add_library(fulmetry_viewport_mesh STATIC src/MeshAsset.cpp)
+target_include_directories(fulmetry_viewport_mesh PUBLIC include)
+target_include_directories(fulmetry_viewport_mesh SYSTEM PRIVATE third_party)  # cgltf 1.14 (MIT), vendored
+target_link_libraries(fulmetry_viewport_mesh PUBLIC fulmetry_core)
+
+if(FULMETRY_BUILD_TESTS)
+  add_executable(fulmetry_viewport_mesh_tests tests/test_mesh_asset.cpp)
+  target_link_libraries(fulmetry_viewport_mesh_tests PRIVATE fulmetry_viewport_mesh fulmetry_third_party)
+  target_compile_definitions(fulmetry_viewport_mesh_tests PRIVATE
+    FULMETRY_TESTMESHES="${CMAKE_CURRENT_SOURCE_DIR}/spike/testmeshes")
+  add_test(NAME viewport_mesh COMMAND fulmetry_viewport_mesh_tests)
+endif()
+
 if(NOT FULMETRY_WITH_WICKED)
   add_library(fulmetry_viewport INTERFACE)
   target_link_libraries(fulmetry_viewport INTERFACE fulmetry_core)
