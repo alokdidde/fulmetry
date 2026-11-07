@@ -32,7 +32,7 @@ if(FULMETRY_WITH_RAVEN_GUI)
 
   add_subdirectory(spike)
 
-  add_library(fulmetry_ui_raven STATIC raven/Kit.cpp raven/StageImage.cpp)
+  add_library(fulmetry_ui_raven STATIC raven/Kit.cpp raven/StageImage.cpp raven/WorkbenchView.cpp)
   target_include_directories(fulmetry_ui_raven PUBLIC raven)
   target_link_libraries(fulmetry_ui_raven PUBLIC fulmetry_ui raven::raven)
 endif()
