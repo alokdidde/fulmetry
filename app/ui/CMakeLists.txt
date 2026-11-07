@@ -31,4 +31,8 @@ if(FULMETRY_WITH_RAVEN_GUI)
   target_compile_options(raven PRIVATE $<$<NOT:$<C_COMPILER_ID:MSVC>>:-w>)
 
   add_subdirectory(spike)
+
+  add_library(fulmetry_ui_raven STATIC raven/Kit.cpp raven/StageImage.cpp)
+  target_include_directories(fulmetry_ui_raven PUBLIC raven)
+  target_link_libraries(fulmetry_ui_raven PUBLIC fulmetry_ui raven::raven)
 endif()
