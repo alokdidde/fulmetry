@@ -59,4 +59,15 @@ if(FULMETRY_BUILD_TESTS)
   add_test(NAME viewport_wicked COMMAND fulmetry_viewport_tests)
   add_test(NAME viewport_wicked_spike
     COMMAND fulmetry_wicked_spike ${rover_fixture} ${CMAKE_CURRENT_BINARY_DIR}/rover-wicked.png 640 400 --no-warm)
+
+  # High-key render of the rover with the stand-in meshes, one part selected. lavapipe is deterministic run to run;
+  # the limits leave room for another Mesa/LLVM version, not for a moved part or a lost shadow or outline.
+  # Goldens are per backend: this one is lavapipe (software Vulkan). Regenerate: FULMETRY_UPDATE_GOLDENS=1.
+  fulmetry_add_golden_test(NAME rover-wicked-highkey
+    COMMAND $<TARGET_FILE:fulmetry_wicked_spike> ${rover_fixture} rover-wicked-highkey.png 640 400
+            --meshes ${testmeshes} --select part:rover/camera-head --no-warm
+    OUTPUT rover-wicked-highkey.png
+    GOLDEN ${CMAKE_CURRENT_SOURCE_DIR}/tests/golden/rover-wicked-highkey.png
+    THRESHOLD 16 MAX_RMSE 3.0 MAX_FRACTION 0.005
+    LABELS wicked)
 endif()
