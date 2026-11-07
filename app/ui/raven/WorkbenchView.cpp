@@ -545,7 +545,7 @@ void WorkbenchView::buildPin() {
             post([this, comment] {
                 if (!agent_) return;
                 auto id = agent_->startAgentForComment(comment, std::nullopt);
-                std::printf("comment %s sent to %s\n", comment.id.value.c_str(), id.ok() ? id->value.c_str() : "nobody");
+                std::printf("comment %s sent to %s\n", comment.id.value.c_str(), id.ok() ? id->agent.value.c_str() : "nobody");
                 std::fflush(stdout);
             });
         }, {kInk, 0x2C3137, 1, 1, true});
