@@ -1,9 +1,9 @@
 # Owner: S5 Workbench UI.
 # fulmetry_ui: what the workbench shows (WorkbenchModel), GUI-free, always built and unit-tested.
 # With FULMETRY_WITH_RAVEN_GUI=ON: fulmetry_ui_raven (the Raven view) and fulmetry_workbench (the shell).
-add_library(fulmetry_ui STATIC src/WorkbenchModel.cpp src/DriveTest.cpp)
+add_library(fulmetry_ui STATIC src/WorkbenchModel.cpp src/DriveTest.cpp src/ProjectLibrary.cpp)
 target_include_directories(fulmetry_ui PUBLIC include)
-target_link_libraries(fulmetry_ui PUBLIC fulmetry_core PRIVATE fulmetry_third_party)
+target_link_libraries(fulmetry_ui PUBLIC fulmetry_core PRIVATE fulmetry_project fulmetry_third_party)
 
 if(FULMETRY_BUILD_TESTS)
   enable_testing()
@@ -32,7 +32,7 @@ if(FULMETRY_WITH_RAVEN_GUI)
 
   add_subdirectory(spike)
 
-  add_library(fulmetry_ui_raven STATIC raven/Kit.cpp raven/StageImage.cpp raven/WorkbenchView.cpp raven/WorkbenchHarness.cpp
+  add_library(fulmetry_ui_raven STATIC raven/Kit.cpp raven/StageImage.cpp raven/WorkbenchView.cpp raven/WorkbenchHarness.cpp raven/WorkbenchHome.cpp
                                        raven/LiveStage.cpp raven/SimulateMode.cpp)
   target_include_directories(fulmetry_ui_raven PUBLIC raven)
   target_link_libraries(fulmetry_ui_raven PUBLIC fulmetry_ui raven::raven)
@@ -54,7 +54,7 @@ if(FULMETRY_WITH_RAVEN_GUI)
     # Builds the whole shell on Raven's null platform and backend (no display, no GPU), runs 120 frames with
     # the action menu open, the chat docked left and a part selected, and fails on any Raven warning or error.
     add_test(NAME ui_workbench_headless
-      COMMAND fulmetry_workbench --headless --strict --frames 120 --open menu --chat-left
+      COMMAND fulmetry_workbench --headless --strict --project sample --frames 120 --open menu --chat-left
               --select part:rover/camera-head)
     # With Wicked the stage renders live (lavapipe), and the run continues past 120 frames until it has settled.
     set_tests_properties(ui_workbench_headless PROPERTIES
@@ -68,11 +68,19 @@ if(FULMETRY_WITH_RAVEN_GUI)
     set_tests_properties(ui_workbench_onboarding PROPERTIES
       PASS_REGULAR_EXPRESSION "onboarding open.*harness answer: raven.*new agents run on: raven/claude-sonnet-5-5\nframes: [0-9]+, raven reports: 0"
       ENVIRONMENT "RAVEN_LIVE_RELOAD=0;FULMETRY_CONFIG_DIR=${CMAKE_CURRENT_BINARY_DIR}/test-config")
+    # The launch screen: no project given, so home opens; a project made from an idea opens with the idea as its
+    # first chat message, and the next launch lists it under Your projects.
+    add_test(NAME ui_workbench_home
+      COMMAND fulmetry_workbench --headless --strict --still --frames 20
+              --do "create:a plant watering robot that waters my basil when the soil is dry")
+    set_tests_properties(ui_workbench_home PROPERTIES
+      PASS_REGULAR_EXPRESSION "home open.*create project: .*plant-watering-robot(-[0-9]+)?/fulmetry.project.json.*workbench ready: Plant watering robot, 1 chat entries.*raven reports: 0"
+      ENVIRONMENT "RAVEN_LIVE_RELOAD=0;FULMETRY_CONFIG_DIR=${CMAKE_CURRENT_BINARY_DIR}/test-home/config;FULMETRY_PROJECTS_DIR=${CMAKE_CURRENT_BINARY_DIR}/test-home/projects")
     if(FULMETRY_WITH_WICKED)
       # Simulate: the scripted living-room drive to its end on the live stage (MuJoCo when the build has it); the
       # rug crossing and the top speed are measured and the card shows them.
       add_test(NAME ui_workbench_simulate
-        COMMAND fulmetry_workbench --headless --strict --frames 30 --simulate --sim-seconds 7.3)
+        COMMAND fulmetry_workbench --headless --strict --project sample --frames 30 --simulate --sim-seconds 7.3)
       set_tests_properties(ui_workbench_simulate PROPERTIES
         PASS_REGULAR_EXPRESSION "simulate on.*simulate: t 7.30 s.*finding speed .*finding surface .*raven reports: 0"
         ENVIRONMENT "RAVEN_LIVE_RELOAD=0;FULMETRY_CONFIG_DIR=${CMAKE_CURRENT_BINARY_DIR}/test-config")

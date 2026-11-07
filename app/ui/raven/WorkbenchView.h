@@ -14,6 +14,7 @@
 #include "StageImage.h"
 #include "fulmetry/core/Events.h"
 #include "fulmetry/core/IAgentClient.h"
+#include "fulmetry/ui/ProjectLibrary.h"
 #include "fulmetry/ui/WorkbenchModel.h"
 
 namespace fulmetry::ui {
@@ -72,6 +73,21 @@ public:
     // Runs a harness command as its button would: install:<id>, signin:<id>, answer:<id>, cancel:<id>,
     // signout:<id>, off:<id>, on:<id>, add:<registry id>, remove:<id>, choose:<id>[/<model>]. For the shots.
     bool harnessCommand(const std::string& command);
+    // Home: start a project from an idea, or open a recent one or the sample. The launch screen when no project
+    // is open (setHomeClosable(false): it cannot be closed then). The brand in the top bar opens it again.
+    struct HomeLists { std::vector<ProjectEntry> recent, samples; };
+    void setHomeLists(HomeLists lists);
+    void setHomeClosable(bool closable) { homeClosable_ = closable; }
+    void setHomeOpen(bool open);
+    bool homeOpen() const { return homeOpen_; }
+    // `create` makes a project from the idea and opens it, false when it could not; `open` opens a project file.
+    void setHomeHandlers(std::function<bool(const std::string& idea)> create,
+                         std::function<void(const std::string& path)> open) {
+        createHandler_ = std::move(create);
+        openHandler_ = std::move(open);
+    }
+    bool createProject(const std::string& idea);
+    void openProject(const std::string& path);
     // Simulate mode (SimulateMode): the Simulate button, the menu's Simulate and Esc call `handler`;
     // setSimulating swaps the part card for the drive-test card (the "drive" panel) and Simulate for Stop.
     void setSimulateHandler(std::function<void()> handler) { simulateHandler_ = std::move(handler); }
@@ -102,6 +118,8 @@ private:
     void buildChat();
     void placePin();
     void bindHarness();
+    void bindHome();
+    void buildHome();
     void buildHarnessChip();
     void buildPicker();
     void buildOnboard();
@@ -153,6 +171,11 @@ private:
     std::map<std::string, std::string> credentialDraft_;
     uint64_t shownHarness_ = 0;
     std::string shownOnboardSel_;
+    // home
+    bool homeOpen_ = false, homeClosable_ = true;
+    HomeLists home_;
+    std::function<bool(const std::string&)> createHandler_;
+    std::function<void(const std::string&)> openHandler_;
 };
 
 }  // namespace fulmetry::ui

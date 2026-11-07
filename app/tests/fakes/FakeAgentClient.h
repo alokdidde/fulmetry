@@ -23,6 +23,9 @@ public:
         harnesses_ = catalog(harnesses);
     }
 
+    // Carries harness state (installed, signed in) over from another client, as one T3 Code server would keep it.
+    void restoreHarnesses(std::vector<Harness> harnesses) { harnesses_ = std::move(harnesses); }
+
     Status connect(const std::string& url) override {
         if (url.rfind("ws://", 0) != 0 && url.rfind("fake://", 0) != 0) return Error{"bad_url", url};
         connected_ = true;
