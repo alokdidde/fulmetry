@@ -1,0 +1,26 @@
+{
+  "name": "@fulmetry/provider-raven",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "EverMind Raven as a T3 Code provider over ACP (`raven acp`). Shaped like T3 Code's packages/provider-kiro.",
+  "license": "MIT",
+  "exports": {
+    "./settings": "./src/settings.ts",
+    "./server": "./src/server.ts",
+    "./testing": "./src/testing.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "typescript": "5.9.3",
+    "vitest": "5.0.5"
+  },
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22"
+  }
+}
