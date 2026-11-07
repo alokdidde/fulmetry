@@ -1,0 +1,5 @@
+[submodule "agent/t3code"]
+	path = agent/t3code
+	url = https://github.com/alokdidde/t3code
+	shallow = true
+	branch = main
