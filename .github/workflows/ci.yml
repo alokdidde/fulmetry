@@ -3,12 +3,43 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:  # runs every job, path-filtered ones included
 
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  changes:
+    # Path filter for the heavy engine jobs (wicked, raven-gui): they run on PRs that touch their paths, and always
+    # on pushes to main and manual runs. Main's runs also save the caches that PR runs restore from.
+    runs-on: ubuntu-24.04
+    outputs:
+      wicked: ${{ steps.filter.outputs.wicked }}
+      raven: ${{ steps.filter.outputs.raven }}
+    steps:
+      - uses: actions/checkout@v4
+        if: github.event_name == 'pull_request'
+        with: { fetch-depth: 0 }
+      - id: filter
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.base_ref }}
+          # Shared by both: what the modules link or test against, the root build, the pins and this workflow.
+          SHARED: '^(app/(core|project|shell|tests)/|CMakeLists\.txt$|CMakePresets\.json$|tools/(deps\.json|fetch_dep\.py|cmake/)|\.github/workflows/ci\.yml$)'
+          WICKED: '^(app/viewport/|fixtures/rover/)'
+          RAVEN: '^app/ui/'
+        run: |
+          if [ "$EVENT" != "pull_request" ]; then
+            echo "wicked=true" >> "$GITHUB_OUTPUT"
+            echo "raven=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git diff --name-only "origin/$BASE...HEAD" > changed.txt
+          match() { if grep -qE -e "$SHARED" -e "$1" changed.txt; then echo true; else echo false; fi; }
+          echo "wicked=$(match "$WICKED")" | tee -a "$GITHUB_OUTPUT"
+          echo "raven=$(match "$RAVEN")" | tee -a "$GITHUB_OUTPUT"
+
   ownership:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
@@ -16,9 +47,13 @@ jobs:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
       - name: Stream stays in its directories
+        env:
+          BASE: ${{ github.base_ref }}
+          HEAD_REF: ${{ github.head_ref }}  # branch names are untrusted input: never inline them in the script
         run: |
-          git diff --name-only origin/${{ github.base_ref }}...HEAD > changed.txt
-          python3 tools/check_ownership.py "${{ github.head_ref }}" $(cat changed.txt)
+          git diff --name-only "origin/$BASE...HEAD" > changed.txt
+          # shellcheck disable=SC2046  # one argument per changed path (paths have no spaces)
+          python3 tools/check_ownership.py "$HEAD_REF" $(cat changed.txt)
 
   app:
     name: app (${{ matrix.os }})
@@ -155,3 +190,179 @@ jobs:
         if: steps.detect.outputs.present == 'true'
         working-directory: agent/maker-tools
         run: pnpm install --frozen-lockfile && pnpm build && pnpm test
+
+  provider-raven:
+    # S7's T3 Code provider for Raven (TypeScript; vitest drives a scripted `raven acp`). About a minute.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: agent/provider-raven
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4  # pnpm version from packageManager in package.json
+        with:
+          package_json_file: agent/provider-raven/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: agent/provider-raven/pnpm-lock.yaml
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Test
+        run: pnpm test
+
+  # The engine jobs keep pinned dependencies in <workspace>/../deps (outside the repo checkout, at a fixed absolute
+  # path, which the cached Wicked build dir relies on). Pins: tools/deps.json, fetched by tools/fetch_dep.py.
+  mujoco:
+    # S4's MujocoSimulation on the official MuJoCo release. Cheap (14 MB cached download, ~30 build steps), so it
+    # runs on every PR.
+    name: app (ubuntu-24.04, MuJoCo)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+      - name: Locate dependencies
+        id: dep
+        run: |
+          echo "MUJOCO_ROOT=$(realpath -m "$GITHUB_WORKSPACE/../deps/mujoco")" >> "$GITHUB_ENV"
+          echo "key=$(python3 tools/fetch_dep.py key mujoco)-linux-x86_64" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: ${{ env.MUJOCO_ROOT }}
+          key: ${{ steps.dep.outputs.key }}
+      - name: Fetch MuJoCo
+        run: python3 tools/fetch_dep.py fetch mujoco "$MUJOCO_ROOT"
+      - name: Configure
+        run: cmake --preset ci-mujoco
+      - name: Build
+        run: cmake --build --preset ci-mujoco
+      - name: Test
+        run: ctest --preset ci-mujoco
+
+  wicked:
+    # S2's WickedViewport: Wicked Engine plus app/viewport/wicked/patches, rendered headless on Mesa lavapipe.
+    # Cold: ~15 min engine build and ~50 s of shader compiles. Both are cached, keyed on the pin plus the patch
+    # hash, so a warm run rebuilds only our own sources.
+    name: app (ubuntu-24.04, Wicked)
+    needs: changes
+    if: needs.changes.outputs.wicked == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      VK_ICD_FILENAMES: /usr/share/vulkan/icd.d/lvp_icd.json
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsdl2-dev libvulkan-dev mesa-vulkan-drivers ninja-build
+      - name: Locate dependencies
+        id: dep
+        run: |
+          deps=$(realpath -m "$GITHUB_WORKSPACE/../deps")
+          echo "WICKED_ROOT=$deps/wicked" >> "$GITHUB_ENV"
+          echo "FULMETRY_WICKED_SHADER_CACHE=$deps/wicked-shader-cache/" >> "$GITHUB_ENV"
+          echo "key=$(python3 tools/fetch_dep.py key wicked)" >> "$GITHUB_OUTPUT"
+      # The checkout and the build dir are cached together: tar keeps the engine's mtimes, so Ninja rebuilds only
+      # what the fresh repo checkout touched. restore-keys lets a pin bump rebuild just the engine files it changed.
+      - name: Restore Wicked build
+        id: build-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ${{ env.WICKED_ROOT }}
+            build/ci-wicked
+          key: ${{ steps.dep.outputs.key }}-build-v1
+          restore-keys: wicked-
+      - name: Restore shader cache
+        id: shader-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.FULMETRY_WICKED_SHADER_CACHE }}
+          key: ${{ steps.dep.outputs.key }}-shaders-v1
+      - name: Fetch Wicked Engine
+        run: python3 tools/fetch_dep.py fetch wicked "$WICKED_ROOT"
+      - name: Configure
+        run: cmake --preset ci-wicked
+      - name: Build
+        run: cmake --build --preset ci-wicked
+      # Saved before the tests, so a red test does not throw away a 15-minute engine build.
+      - name: Save Wicked build
+        if: steps.build-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ${{ env.WICKED_ROOT }}
+            build/ci-wicked
+          key: ${{ steps.dep.outputs.key }}-build-v1
+      - name: Test
+        id: test
+        run: ctest --preset ci-wicked
+      - name: Save shader cache
+        if: always() && steps.test.outcome == 'success' && steps.shader-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.FULMETRY_WICKED_SHADER_CACHE }}
+          key: ${{ steps.dep.outputs.key }}-shaders-v1
+      - name: Upload render
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wicked-render
+          path: |
+            build/ci-wicked/app/viewport/rover-wicked.png
+            build/ci-wicked/Testing/Temporary/LastTest.log
+          if-no-files-found: ignore
+          retention-days: 14
+
+  raven-gui:
+    # S5's Raven GUI: every ctest under Xvfb on lavapipe, then the spike's headless smoke run (types into the
+    # composer, scrolls, takes screenshots). About 5 minutes; Raven's checkout takes seconds, so it is not cached.
+    name: app (ubuntu-24.04, Raven GUI)
+    needs: changes
+    if: needs.changes.outputs.raven == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      VK_ICD_FILENAMES: /usr/share/vulkan/icd.d/lvp_icd.json
+      RAVEN_WINDOW_SYSTEM: x11
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libx11-dev libvulkan-dev mesa-vulkan-drivers xvfb xauth xdotool imagemagick \
+            ninja-build
+      - name: Fetch Raven
+        run: |
+          echo "RAVEN_GUI_ROOT=$(realpath -m "$GITHUB_WORKSPACE/../deps/raven")" >> "$GITHUB_ENV"
+          python3 tools/fetch_dep.py fetch raven "$(realpath -m "$GITHUB_WORKSPACE/../deps/raven")"
+      - name: Configure
+        run: cmake --preset ci-raven
+      - name: Build
+        run: cmake --build --preset ci-raven
+      - name: Test
+        # Any ui test S5 adds gets a display here; today that is the fakes suite against the Raven-enabled build.
+        run: xvfb-run -a -s "-screen 0 1440x900x24" ctest --preset ci-raven
+      - name: Smoke (spike under Xvfb)
+        shell: bash
+        run: |
+          mkdir -p build/ci-raven/smoke
+          app/ui/spike/run_headless.sh build/ci-raven/app/ui/spike/raven_spike build/ci-raven/smoke/raven-spike.png \
+            | tee build/ci-raven/smoke/raven-spike.log
+          grep -q "frames measured" build/ci-raven/smoke/raven-spike.log
+          grep -q 'composer committed: "Make the wheels 70 mm"' build/ci-raven/smoke/raven-spike.log
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: raven-gui-smoke
+          path: build/ci-raven/smoke/
+          if-no-files-found: ignore
+          retention-days: 14

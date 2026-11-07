@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Fulmetry workbench (M1 shell), after the approved prototype (UI spec, "Layout").
+  Two regions: the 3D stage, and the project chat docked beside it (352 px, right by default; "Dock left"
+  moves it). Every other control floats over the stage. No DockArea: its tab strips are not in the spec.
+  The lists (object tabs, parts, checks, chat) are filled from the project model by app/ui/raven.
+-->
+<Window Title="Fulmetry" Width="1440" Height="900" MinWidth="1100" MinHeight="640" ClearColor="#FFFFFF">
+	<Shortcut Keys="Escape" Action="wb.escape"/>
+
+	<HBox Name="root" Spacing="0">
+		<!-- ===================================================== stage -->
+		<Overlay Name="stage.area" Slot.Fill="1" Clip="true">
+			<Stage Name="stage"/>
+
+			<!-- top bar: brand, object tabs, Simulate -->
+			<HBox Name="topbar" Spacing="10" Height="46" Slot.HAlign="Left" Slot.VAlign="Top" Slot.Padding="16,10,0,0">
+				<Panel Pad="12,0">
+					<HBox Spacing="10">
+						<Image Source="icons/mark.svg" Slot.VAlign="Center"/>
+						<Label Name="brand" Font="fonts/InterTight-Bold.ttf" TextSize="19" Color="#14171A" Slot.VAlign="Center">FULMETRY</Label>
+					</HBox>
+				</Panel>
+				<Panel Pad="3">
+					<HBox Name="tabs" Spacing="0"/>
+				</Panel>
+				<Border Name="simulate" Background="#E5322D" CornerRadius="3" Shadow="22,0,7" Padding="14,0" Cursor="Hand">
+					<HBox Spacing="8">
+						<Image Source="icons/play.svg" Slot.VAlign="Center"/>
+						<Label Font="fonts/Inter-SemiBold.ttf" TextSize="13" Color="#FFFFFF" Slot.VAlign="Center">Simulate</Label>
+					</HBox>
+				</Border>
+			</HBox>
+
+			<!-- totals: cost, mass, print time, checks -->
+			<Panel Name="totals" Pad="0" Height="46" Slot.HAlign="Right" Slot.VAlign="Top" Slot.Padding="0,10,16,0">
+				<HBox Spacing="0">
+					<StatCell Title="COST" ValueName="totals.cost"/>
+					<Rule/>
+					<StatCell Title="MASS" ValueName="totals.mass"/>
+					<Rule/>
+					<StatCell Title="PRINT TIME" ValueName="totals.print"/>
+					<Rule/>
+					<VBox Spacing="1" Slot.Padding="12,6,12,6">
+						<Eyebrow>CHECKS</Eyebrow>
+						<HBox Spacing="9">
+							<DotCount Tone="#14A86B" ValueName="totals.pass"/>
+							<DotCount Tone="#E5322D" ValueName="totals.fail"/>
+							<DotCount Tone="#E88A12" ValueName="totals.open"/>
+						</HBox>
+					</VBox>
+				</HBox>
+			</Panel>
+
+			<!-- Parts button, and the parts list it opens (P) -->
+			<Panel Name="parts.button" Pad="12,0" Height="38" Slot.HAlign="Left" Slot.VAlign="Top" Slot.Padding="16,80,0,0" Cursor="Hand">
+				<HBox Spacing="7">
+					<Image Source="icons/parts.svg" Slot.VAlign="Center"/>
+					<Label Font="fonts/Inter-SemiBold.ttf" TextSize="13" Color="#14171A" Slot.VAlign="Center">Parts</Label>
+					<Label Name="parts.count" Font="fonts/IBMPlexMono-Regular.ttf" TextSize="11" Color="#66707B" Slot.VAlign="Center"/>
+				</HBox>
+			</Panel>
+			<Panel Name="tray" Pad="12" Width="250" Visibility="Collapsed" Slot.HAlign="Left" Slot.VAlign="Top" Slot.Padding="16,80,0,0">
+				<ScrollBox Name="tray.scroll" MaxHeight="660">
+					<VBox Name="tray.list" Spacing="12"/>
+				</ScrollBox>
+			</Panel>
+
+			<!-- comment pinned to a part (positioned from C++ over its anchor) -->
+			<VBox Name="pin" Spacing="0" Width="256" Slot.HAlign="Left" Slot.VAlign="Top" Visibility="Hidden">
+				<Border Background="#FFFFFF" CornerRadius="2" Shadow="22,0,8" Clip="true">
+					<HBox Spacing="0">
+						<Border Width="3" Background="#E5322D"/>
+						<VBox Name="pin.body" Spacing="6" Slot.Fill="1" Slot.Padding="10,8,10,9"/>
+					</HBox>
+				</Border>
+				<Border Width="2" Height="10" Background="#E5322D" Slot.HAlign="Center"/>
+			</VBox>
+
+			<!-- object or part card, bottom right -->
+			<Panel Name="inspector" Pad="14,14,14,16" Width="330" Slot.HAlign="Right" Slot.VAlign="Bottom" Slot.Padding="0,0,16,16">
+				<VBox Name="inspector.body" Spacing="12"/>
+			</Panel>
+
+			<!-- gestures hint, bottom left -->
+			<Label Name="hint" Markdown="true" TextSize="11.5" Color="#5D6670" Slot.HAlign="Left" Slot.VAlign="Bottom" Slot.Padding="16,0,0,16" HitTestable="false"/>
+
+			<!-- the action menu: groups of icon tiles -->
+			<Panel Name="menu" Pad="10" Width="312" Visibility="Collapsed" Slot.HAlign="Center" Slot.VAlign="Bottom" Slot.Padding="0,0,0,68">
+				<VBox Name="menu.body" Spacing="10"/>
+			</Panel>
+
+			<!-- Actions pill, bottom centre -->
+			<Border Name="actions" Background="#FFFFFF" BorderColor="#E1E5EA" BorderWidth="1" CornerRadius="19" Shadow="22,0,8"
+				Padding="10,7,16,7" Slot.HAlign="Center" Slot.VAlign="Bottom" Slot.Padding="0,0,0,18" Cursor="Hand">
+				<HBox Spacing="8">
+					<Image Source="icons/actions-pill.svg" Slot.VAlign="Center"/>
+					<Label Font="fonts/Inter-SemiBold.ttf" TextSize="13" Color="#14171A" Slot.VAlign="Center">Actions</Label>
+					<Label TextSize="12" Color="#66707B" Slot.VAlign="Center">or right-click a part</Label>
+				</HBox>
+			</Border>
+		</Overlay>
+
+		<!-- ===================================================== project chat -->
+		<Border Name="chat.rule" Width="1" Background="#E1E5EA"/>
+		<Border Name="chat" Width="352" Background="#FFFFFF">
+			<VBox Spacing="0">
+				<HBox Spacing="8" Slot.Padding="14,12,14,10">
+					<VBox Spacing="1" Slot.Fill="1">
+						<Eyebrow>PROJECT CHAT</Eyebrow>
+						<Label Name="chat.title" Font="fonts/Inter-SemiBold.ttf" TextSize="15" Color="#14171A"/>
+					</VBox>
+					<SmallButton Name="chat.side" Text="Dock left" Slot.VAlign="Center"/>
+				</HBox>
+				<Rule Vertical="false"/>
+				<ScrollBox Name="messages" Slot.Fill="1">
+					<VBox Name="message.list" Spacing="14" Slot.Padding="14,14,14,14"/>
+				</ScrollBox>
+				<Rule Vertical="false"/>
+				<VBox Spacing="8" Slot.Padding="12,10,12,12">
+					<HBox Name="about" Spacing="6">
+						<Label TextSize="11.5" Color="#66707B" Slot.VAlign="Center">About</Label>
+						<Border Background="#F3F5F7" BorderColor="#E1E5EA" BorderWidth="1" CornerRadius="9" Padding="7,1,8,2">
+							<Label Name="about.label" TextSize="11.5" Color="#14171A"/>
+						</Border>
+					</HBox>
+					<Border Background="#F3F5F7" BorderColor="#E1E5EA" BorderWidth="1" CornerRadius="6" Padding="10,5,5,5">
+						<HBox Spacing="8">
+							<TextInput Name="composer" Class="composer" Placeholder="Ask for a change to the desk rover" Slot.Fill="1" Slot.VAlign="Center"/>
+							<Border Name="send" Background="#E5322D" CornerRadius="3" Padding="15,7" Cursor="Hand">
+								<Label Font="fonts/Inter-SemiBold.ttf" TextSize="13" Color="#FFFFFF">Send</Label>
+							</Border>
+						</HBox>
+					</Border>
+				</VBox>
+			</VBox>
+		</Border>
+	</HBox>
+</Window>

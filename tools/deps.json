@@ -1,0 +1,23 @@
+{
+  "_doc": "Pinned versions of the opt-in heavy engines: the one place to change a pin. CI and tools/fetch_dep.py read it. See docs/streams/s10.md.",
+  "mujoco": {
+    "owner": "s4",
+    "version": "3.3.7",
+    "url": "https://github.com/google-deepmind/mujoco/releases/download/3.3.7/mujoco-3.3.7-linux-x86_64.tar.gz",
+    "sha256": "1895a2f71e86d9a6026703ebdc1fae32af07792805ac56f9a73abceca30dbe1c",
+    "cmake": "-DFULMETRY_WITH_MUJOCO=ON -DMUJOCO_ROOT=<dest>"
+  },
+  "wicked": {
+    "owner": "s2",
+    "repo": "https://github.com/turanszkij/WickedEngine.git",
+    "commit": "bee31c0309c03fbf8e793af9fdda253b213685be",
+    "patches": "app/viewport/wicked/patches",
+    "cmake": "-DFULMETRY_WITH_WICKED=ON -DWICKED_ROOT=<dest>"
+  },
+  "raven": {
+    "owner": "s5",
+    "repo": "https://github.com/oscar-soirey/Raven.git",
+    "commit": "a472444469dd46890e33585e81641309e591fa30",
+    "cmake": "-DFULMETRY_WITH_RAVEN_GUI=ON -DRAVEN_GUI_ROOT=<dest>"
+  }
+}
