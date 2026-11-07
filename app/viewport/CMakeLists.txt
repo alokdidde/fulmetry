@@ -31,7 +31,7 @@ add_subdirectory(wicked)  # builds the engine with its own flags, not ours
 
 add_library(fulmetry_viewport STATIC src/WickedViewport.cpp)
 target_include_directories(fulmetry_viewport PUBLIC include)
-target_link_libraries(fulmetry_viewport PUBLIC fulmetry_core PRIVATE WickedEngine)
+target_link_libraries(fulmetry_viewport PUBLIC fulmetry_core fulmetry_viewport_mesh PRIVATE WickedEngine)
 # Wicked headers are not -Wpedantic clean; keep our warnings but treat theirs as system headers.
 target_include_directories(fulmetry_viewport SYSTEM PRIVATE ${WICKED_ROOT}/WickedEngine)
 target_compile_definitions(fulmetry_viewport PUBLIC FULMETRY_HAS_WICKED=1)
@@ -48,15 +48,15 @@ target_link_libraries(fulmetry_wicked_spike PRIVATE fulmetry_viewport fulmetry_p
 fulmetry_wicked_runtime(fulmetry_wicked_spike)
 
 if(FULMETRY_BUILD_TESTS)
+  set(rover_fixture ${PROJECT_SOURCE_DIR}/fixtures/rover/fulmetry.project.json)
+  set(testmeshes ${CMAKE_CURRENT_SOURCE_DIR}/spike/testmeshes)
   add_executable(fulmetry_viewport_tests tests/test_wicked_viewport.cpp)
   target_include_directories(fulmetry_viewport_tests PRIVATE ${PROJECT_SOURCE_DIR}/app/tests)
   target_link_libraries(fulmetry_viewport_tests PRIVATE fulmetry_viewport fulmetry_project fulmetry_third_party)
-  target_compile_definitions(fulmetry_viewport_tests PRIVATE FULMETRY_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+  target_compile_definitions(fulmetry_viewport_tests PRIVATE FULMETRY_SOURCE_DIR="${PROJECT_SOURCE_DIR}"
+                                                             FULMETRY_TESTMESHES="${testmeshes}")
   fulmetry_wicked_runtime(fulmetry_viewport_tests)
-  # Root CMakeLists calls enable_testing() after the modules; enable it here so this test registers.
-  enable_testing()
   add_test(NAME viewport_wicked COMMAND fulmetry_viewport_tests)
   add_test(NAME viewport_wicked_spike
-    COMMAND fulmetry_wicked_spike ${PROJECT_SOURCE_DIR}/fixtures/rover/fulmetry.project.json
-            ${CMAKE_CURRENT_BINARY_DIR}/rover-wicked.png 640 400)
+    COMMAND fulmetry_wicked_spike ${rover_fixture} ${CMAKE_CURRENT_BINARY_DIR}/rover-wicked.png 640 400 --no-warm)
 endif()
