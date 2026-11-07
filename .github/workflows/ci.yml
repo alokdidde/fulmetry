@@ -134,6 +134,38 @@ jobs:
         working-directory: worker
         run: pytest -q
 
+  solidcraft:
+    # cad-rs/: the SolidCraft-kernel part builder (Rhai part scripts), then the worker's cad.build through it.
+    name: solidcraft (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with: { components: "clippy, rustfmt" }
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: cad-rs }
+      - name: Lint
+        working-directory: cad-rs
+        run: cargo fmt --check && cargo clippy --release --all-targets -- -D warnings
+      - name: Test
+        working-directory: cad-rs
+        run: cargo test --release
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Worker through fulmetry-cad
+        shell: bash
+        run: |
+          pip install -e 'worker[test]'
+          bin="$PWD/cad-rs/target/release/fulmetry-cad"
+          if [ "$RUNNER_OS" = Windows ]; then bin="$(cygpath -w "$bin.exe")"; fi
+          export FULMETRY_CAD_BIN="$bin"
+          cd worker && pytest -q -k "rhai or solidcraft"
+
   worker-cad:
     # The worker with S8's optional build123d `cad` extra.
     runs-on: ubuntu-24.04

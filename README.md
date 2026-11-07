@@ -25,6 +25,7 @@ app/            C++20 desktop app
   shell/        composition root (main)                integrator
   tests/        fakes, conformance suites, unit tests
 worker/         Python engine worker, JSON-RPC         S8
+cad-rs/         SolidCraft-kernel part builder (Rust)  S8
 agent/          T3 Code fork, Raven provider, MCP toolkits   S7, S9
 fixtures/rover/ the desk rover every test uses
 tools/          ownership check, stream map            S10

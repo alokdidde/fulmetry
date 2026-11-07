@@ -76,6 +76,7 @@
       "name": "Engine worker",
       "paths": [
         "worker/",
+        "cad-rs/",
         "docs/streams/s8.md",
         "fixtures/rover/cad/"
       ]

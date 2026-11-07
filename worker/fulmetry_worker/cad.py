@@ -1,7 +1,9 @@
-"""cad.build: run a part's build123d source and export STEP + GLB, cached by a hash of source and params.
+"""cad.build: run a part's CAD source and export STEP + GLB, cached by a hash of source and params.
 
-Convention: part `part:<object>/<slug>` has its source at `<projectRoot>/cad/<object>/<slug>.py`, which defines
-`PARAMS: dict` and `build(params: dict) -> build123d Part`. Outputs go to
+Convention: part `part:<object>/<slug>` has its source at `<projectRoot>/cad/<object>/<slug>.rhai` or `<slug>.py`.
+A `.rhai` script (`params()` and `build(p)`) is built by SolidCraft's kernel through the `fulmetry-cad` binary
+(cad-rs/; found as $FULMETRY_CAD_BIN or on PATH). A `.py` source defines `PARAMS: dict` and
+`build(params: dict) -> build123d Part`. Outputs go to
 `<projectRoot>/.fulmetry/build/<object>/<slug>.{step,glb,json}`; the .json records the hash and bounds.
 """
 from __future__ import annotations
@@ -10,6 +12,8 @@ import hashlib
 import json
 import os
 import re
+import shutil
+import subprocess
 import sys
 import types
 from pathlib import Path
@@ -26,13 +30,24 @@ ANGULAR_DEFLECTION = 0.2
 DEFAULT_COLOR = "#c9ccd1"
 
 
+def solidcraft_bin() -> str | None:
+    return os.environ.get("FULMETRY_CAD_BIN") or shutil.which("fulmetry-cad")
+
+
 def engines() -> dict[str, str]:
     """Installed CAD engines and their versions, without importing them (OCP takes seconds to load)."""
     from importlib.metadata import PackageNotFoundError, version
+    found = {}
     try:
-        return {"build123d": version("build123d")}
+        found["build123d"] = version("build123d")
     except PackageNotFoundError:
-        return {}
+        pass
+    if solidcraft_bin():
+        try:
+            found["solidcraft"] = _solidcraft(["version"])["solidcraft"]
+        except RpcError:
+            pass
+    return found
 
 
 def parse_part(part: str) -> tuple[str, str]:
@@ -43,8 +58,24 @@ def parse_part(part: str) -> tuple[str, str]:
 
 
 def source_path(project_root: Path, part: str) -> Path:
+    """The part's .rhai source if it has one, else its .py path (which may not exist)."""
     obj, slug = parse_part(part)
-    return project_root / "cad" / obj / f"{slug}.py"
+    rhai = project_root / "cad" / obj / f"{slug}.rhai"
+    return rhai if rhai.is_file() else rhai.with_suffix(".py")
+
+
+def _solidcraft(args: list[str], request: dict | None = None) -> dict:
+    exe = solidcraft_bin()
+    if not exe:
+        raise RpcError(ENGINE_MISSING, "fulmetry-cad (SolidCraft) is not installed; build cad-rs/ or set FULMETRY_CAD_BIN")
+    try:
+        r = subprocess.run([exe, *args], input=json.dumps(request) if request is not None else "", capture_output=True,
+                           text=True, timeout=600)
+    except (OSError, subprocess.TimeoutExpired) as e:
+        raise RpcError(ENGINE_MISSING, f"fulmetry-cad failed to run: {e}") from e
+    if r.returncode != 0:
+        raise RpcError(BUILD_FAILED, r.stderr.strip() or f"fulmetry-cad exited with {r.returncode}")
+    return json.loads(r.stdout)
 
 
 def source_hash(source: bytes, params: dict) -> str:
@@ -83,8 +114,13 @@ def build(project_root: str, part: str, overrides: dict | None = None) -> dict:
     if not src.is_file():
         raise RpcError(SOURCE_NOT_FOUND, f"no CAD source for {part}", {"expected": str(src)})
     source = src.read_bytes()
-    module = _load(src, source)
-    params = {**module.PARAMS, **(overrides or {})}
+    solidcraft = src.suffix == ".rhai"
+    if solidcraft:
+        module = None
+        params = {**_solidcraft(["params", str(src)]), **(overrides or {})}
+    else:
+        module = _load(src, source)
+        params = {**module.PARAMS, **(overrides or {})}
     digest = source_hash(source, params)
 
     obj, slug = parse_part(part)
@@ -99,9 +135,36 @@ def build(project_root: str, part: str, overrides: dict | None = None) -> dict:
     except (OSError, ValueError, KeyError):
         pass
 
+    out.mkdir(parents=True, exist_ok=True)
+    meta.unlink(missing_ok=True)  # never leave a hash that points at half-written files
+    from .mesh import material_from_color
+    default = material_from_color(slug, DEFAULT_COLOR)
+    if solidcraft:
+        bounds = _build_solidcraft(src, overrides or {}, step, glb, default, slug)
+    else:
+        bounds = _build_build123d(src, module, params, step, glb, default, slug)
+    meta.write_text(json.dumps({"part": part, "sourceHash": digest, "params": params, "bounds": bounds},
+                               indent=2), encoding="utf-8")
+    return {**result, "bounds": bounds}
+
+
+def _build_solidcraft(src: Path, overrides: dict, step: Path, glb: Path, default: dict, name: str) -> dict:
+    from .mesh import PALETTE
+    tmp_step, tmp_glb = step.with_name(step.name + ".tmp"), glb.with_name(glb.name + ".tmp")
+    r = _solidcraft(["build"], {"source": str(src), "overrides": overrides, "step": str(tmp_step), "glb": str(tmp_glb),
+                                "name": name, "palette": PALETTE, "default": default, "chord": LINEAR_DEFLECTION,
+                                "angle": ANGULAR_DEFLECTION})
+    for tmp, final in ((tmp_step, step), (tmp_glb, glb)):
+        if not tmp.is_file():
+            raise RpcError(BUILD_FAILED, f"export of {final.name} failed")
+        os.replace(tmp, final)
+    return r["bounds"]
+
+
+def _build_build123d(src: Path, module: Any, params: dict, step: Path, glb: Path, default: dict, name: str) -> dict:
     from build123d import export_step
 
-    from .mesh import material_from_color, write_glb
+    from .mesh import write_glb
 
     try:
         shape = module.build(dict(params))
@@ -112,16 +175,10 @@ def build(project_root: str, part: str, overrides: dict | None = None) -> dict:
 
     bb = shape.bounding_box(optimal=True)
     bounds = {"min": [round(v, 4) for v in bb.min], "max": [round(v, 4) for v in bb.max]}
-
-    out.mkdir(parents=True, exist_ok=True)
-    meta.unlink(missing_ok=True)  # never leave a hash that points at half-written files
     _write_atomic(step, lambda p: export_step(shape, p))
-    default = material_from_color(slug, DEFAULT_COLOR)
     _write_atomic(glb, lambda p: write_glb(shape, p, default, linear=LINEAR_DEFLECTION, angular=ANGULAR_DEFLECTION,
-                                           name=slug) is not None)
-    meta.write_text(json.dumps({"part": part, "sourceHash": digest, "params": params, "bounds": bounds},
-                               indent=2), encoding="utf-8")
-    return {**result, "bounds": bounds}
+                                           name=name) is not None)
+    return bounds
 
 
 if __name__ == "__main__":  # python -m fulmetry_worker.cad <projectRoot> <part>

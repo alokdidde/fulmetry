@@ -116,3 +116,36 @@ def test_build_exception_is_an_rpc_error_and_the_worker_lives(project):
     bad.write_text("this is not python(\n", encoding="utf-8")
     assert call({"projectRoot": str(project), "part": "part:rover/broken"})["error"]["code"] == BUILD_FAILED
     assert "result" in handle({"jsonrpc": "2.0", "id": 2, "method": "worker.ping"})
+
+
+# --- SolidCraft (cad-rs/, the fulmetry-cad binary) ----------------------------------------------------------------
+
+CASTER = "part:rover/ball-caster"
+needs_solidcraft = pytest.mark.skipif(cad.solidcraft_bin() is None, reason="fulmetry-cad is not built")
+
+
+@needs_solidcraft
+def test_rhai_part_builds_with_solidcraft_and_caches(project):
+    r = call({"projectRoot": str(project), "part": CASTER})
+    assert "result" in r, r
+    result = r["result"]
+    assert errors(method_contracts()["cad.build"]["result"], result) == []
+    assert Path(result["stepFile"]).read_bytes().startswith(b"ISO-10303-21")
+    glb = Path(result["meshFile"]).read_bytes()
+    assert glb[:4] == b"glTF"
+    gltf = json.loads(glb[20:20 + int.from_bytes(glb[12:16], "little")])
+    assert [m["extras"]["key"] for m in gltf["materials"]] == ["plastic-black", "chrome"]
+    for key in ("min", "max"):
+        assert result["bounds"][key] == pytest.approx(manifest_bounds(CASTER)[key], abs=0.5)
+    assert call({"projectRoot": str(project), "part": CASTER})["result"] == result
+    assert "solidcraft" in cad.engines()
+
+
+@needs_solidcraft
+def test_rhai_overrides_and_errors(project):
+    small = cad.build(str(project), CASTER, {"ball_diameter": 12.0, "housing_diameter": 15.0})
+    assert small["bounds"]["min"][2] == pytest.approx(-6.0, abs=1e-3)
+    bad = project / "cad" / "rover" / "broken.rhai"
+    bad.write_text("fn params() { #{} }\nfn build(p) { box(10, 10, 10) - box(20, 20, 20) }\n", encoding="utf-8")
+    r = call({"projectRoot": str(project), "part": "part:rover/broken"})
+    assert r["error"]["code"] == BUILD_FAILED and "cut" in r["error"]["message"]
