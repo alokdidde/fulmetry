@@ -6,6 +6,8 @@ find_package(Threads REQUIRED)
 target_link_libraries(fulmetry_net PUBLIC Threads::Threads)
 # Development builds find the fork's source checkout; a packaged app finds t3/bin.mjs next to itself.
 target_compile_definitions(fulmetry_net PRIVATE FULMETRY_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+# std::getenv is fine here; MSVC flags it as unsafe (C4996), which -WX turns into an error.
+target_compile_definitions(fulmetry_net PRIVATE $<$<CXX_COMPILER_ID:MSVC>:_CRT_SECURE_NO_WARNINGS>)
 
 if(FULMETRY_BUILD_TESTS)
   add_executable(fulmetry_net_tests tests/test_t3_agent_client.cpp)
