@@ -92,6 +92,7 @@
       "paths": [
         "CMakeLists.txt",
         "CMakePresets.json",
+        ".gitignore",
         "vcpkg.json",
         ".github/",
         "ci/",

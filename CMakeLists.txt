@@ -22,6 +22,13 @@ endif()
 add_library(fulmetry_third_party INTERFACE)
 target_include_directories(fulmetry_third_party SYSTEM INTERFACE third_party)
 
+# enable_testing() must precede the modules so their own add_test() calls register.
+if(FULMETRY_BUILD_TESTS)
+  enable_testing()
+  include(tools/cmake/FulmetryGolden.cmake)
+  add_subdirectory(tools/imgdiff)
+endif()
+
 # Module list is fixed here (S10 owns this file). Each module owns its own CMakeLists.txt.
 add_subdirectory(app/core)
 add_subdirectory(app/project)
@@ -34,6 +41,5 @@ add_subdirectory(app/ui)
 add_subdirectory(app/shell)
 
 if(FULMETRY_BUILD_TESTS)
-  enable_testing()
   add_subdirectory(app/tests)
 endif()
