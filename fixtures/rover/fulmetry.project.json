@@ -44,7 +44,8 @@
           "color": "#f4f4f2",
           "costUsd": 2.1,
           "massG": 88,
-          "material": "PETG"
+          "material": "PETG",
+          "meshFile": "meshes/rover/chassis-tub.glb"
         },
         {
           "id": "part:rover/top-shell",
@@ -55,7 +56,7 @@
             "position": [
               0,
               0,
-              62
+              50
             ],
             "rotation": [
               1,
@@ -66,20 +67,21 @@
           },
           "bounds": {
             "min": [
-              -82.0,
-              -62.0,
-              -12.0
+              -80.0,
+              -60.0,
+              -4.0
             ],
             "max": [
-              82.0,
-              62.0,
-              12.0
+              80.0,
+              60.0,
+              15.0
             ]
           },
           "color": "#f4f4f2",
           "costUsd": 1.6,
           "massG": 61,
-          "material": "PETG"
+          "material": "PETG",
+          "meshFile": "meshes/rover/top-shell.glb"
         },
         {
           "id": "part:rover/camera-head",
@@ -90,7 +92,7 @@
             "position": [
               50,
               0,
-              92
+              79.4
             ],
             "rotation": [
               1,
@@ -103,12 +105,12 @@
             "min": [
               -20.0,
               -18.0,
-              -15.0
+              0.0
             ],
             "max": [
-              20.0,
+              28.5,
               18.0,
-              15.0
+              30.0
             ]
           },
           "color": "#e8402f",
@@ -128,9 +130,10 @@
             "origin": [
               50,
               0,
-              76
+              79.4
             ]
-          }
+          },
+          "meshFile": "meshes/rover/camera-head.glb"
         },
         {
           "id": "part:rover/wheel-l",
@@ -179,7 +182,8 @@
               68,
               30
             ]
-          }
+          },
+          "meshFile": "meshes/rover/wheel-l.glb"
         },
         {
           "id": "part:rover/wheel-r",
@@ -228,7 +232,8 @@
               -68,
               30
             ]
-          }
+          },
+          "meshFile": "meshes/rover/wheel-r.glb"
         },
         {
           "id": "part:rover/motor-l",
@@ -238,7 +243,7 @@
           "placement": {
             "position": [
               0,
-              40,
+              57.6,
               30
             ],
             "rotation": [
@@ -250,19 +255,20 @@
           },
           "bounds": {
             "min": [
-              -12.5,
-              -10.0,
-              -6.0
+              -6.0,
+              -28.4,
+              -5.0
             ],
             "max": [
-              12.5,
+              6.0,
               10.0,
-              6.0
+              5.0
             ]
           },
           "color": "#c9ccd1",
           "costUsd": 2.8,
-          "massG": 10
+          "massG": 10,
+          "meshFile": "meshes/rover/motor-l.glb"
         },
         {
           "id": "part:rover/motor-r",
@@ -272,7 +278,7 @@
           "placement": {
             "position": [
               0,
-              -40,
+              -57.6,
               30
             ],
             "rotation": [
@@ -284,19 +290,20 @@
           },
           "bounds": {
             "min": [
-              -12.5,
+              -6.0,
               -10.0,
-              -6.0
+              -5.0
             ],
             "max": [
-              12.5,
-              10.0,
-              6.0
+              6.0,
+              28.4,
+              5.0
             ]
           },
           "color": "#c9ccd1",
           "costUsd": 2.8,
-          "massG": 10
+          "massG": 10,
+          "meshFile": "meshes/rover/motor-r.glb"
         },
         {
           "id": "part:rover/pan-servo",
@@ -307,7 +314,7 @@
             "position": [
               50,
               0,
-              70
+              49.4
             ],
             "rotation": [
               1,
@@ -318,19 +325,20 @@
           },
           "bounds": {
             "min": [
-              -11.5,
-              -6.0,
-              -11.0
+              -26.6,
+              -6.1,
+              0.0
             ],
             "max": [
-              11.5,
-              6.0,
-              11.0
+              15.8,
+              6.1,
+              30.0
             ]
           },
           "color": "#2f6fe8",
           "costUsd": 1.9,
-          "massG": 9
+          "massG": 9,
+          "meshFile": "meshes/rover/pan-servo.glb"
         },
         {
           "id": "part:rover/main-board",
@@ -341,7 +349,7 @@
             "position": [
               -20,
               0,
-              40
+              58
             ],
             "rotation": [
               1,
@@ -352,19 +360,20 @@
           },
           "bounds": {
             "min": [
-              -30.0,
+              -31.0,
               -22.5,
-              -4.0
+              -3.0
             ],
             "max": [
               30.0,
               22.5,
-              4.0
+              10.1
             ]
           },
           "color": "#1f8a5b",
           "costUsd": 6.5,
-          "massG": 12
+          "massG": 12,
+          "meshFile": "meshes/rover/main-board.glb"
         },
         {
           "id": "part:rover/motor-driver",
@@ -373,9 +382,9 @@
           "group": "Electronics",
           "placement": {
             "position": [
-              -20,
+              35,
               0,
-              22
+              16.4
             ],
             "rotation": [
               1,
@@ -393,12 +402,13 @@
             "max": [
               15.0,
               12.5,
-              3.0
+              11.2
             ]
           },
           "color": "#13a3a3",
           "costUsd": 1.8,
-          "massG": 4
+          "massG": 4,
+          "meshFile": "meshes/rover/motor-driver.glb"
         },
         {
           "id": "part:rover/battery",
@@ -407,9 +417,9 @@
           "group": "Electronics",
           "placement": {
             "position": [
-              -50,
+              -32,
               0,
-              22
+              21.9
             ],
             "rotation": [
               1,
@@ -420,19 +430,20 @@
           },
           "bounds": {
             "min": [
-              -35.0,
-              -17.5,
-              -10.0
+              -18.65,
+              -33.45,
+              -9.45
             ],
             "max": [
-              35.0,
-              17.5,
-              10.0
+              18.65,
+              48.2,
+              9.47
             ]
           },
           "color": "#f2b705",
           "costUsd": 7.0,
-          "massG": 95
+          "massG": 95,
+          "meshFile": "meshes/rover/battery.glb"
         },
         {
           "id": "part:rover/ball-caster",
@@ -454,19 +465,20 @@
           },
           "bounds": {
             "min": [
-              -8.0,
-              -8.0,
+              -9.78,
+              -19.0,
               -8.0
             ],
             "max": [
-              8.0,
-              8.0,
-              8.0
+              9.78,
+              19.0,
+              9.0
             ]
           },
           "color": "#c9ccd1",
           "costUsd": 0.6,
-          "massG": 6
+          "massG": 6,
+          "meshFile": "meshes/rover/ball-caster.glb"
         },
         {
           "id": "part:rover/fasteners",
@@ -488,19 +500,20 @@
           },
           "bounds": {
             "min": [
-              -75.0,
-              -55.0,
-              -2.0
+              -74.85,
+              -60.51,
+              -37.36
             ],
             "max": [
-              75.0,
-              55.0,
-              2.0
+              74.85,
+              60.51,
+              18.89
             ]
           },
           "color": "#b08d57",
           "costUsd": 1.2,
-          "massG": 11
+          "massG": 11,
+          "meshFile": "meshes/rover/fasteners.glb"
         }
       ]
     },
@@ -541,7 +554,8 @@
           "color": "#f4f4f2",
           "costUsd": 0.9,
           "massG": 34,
-          "material": "PLA"
+          "material": "PLA",
+          "meshFile": "meshes/remote/shell.glb"
         },
         {
           "id": "part:remote/board",
@@ -564,18 +578,19 @@
           "bounds": {
             "min": [
               -45.0,
-              -25.0,
-              -3.0
+              -29.4,
+              -1.5
             ],
             "max": [
               45.0,
-              25.0,
-              3.0
+              26.0,
+              7.6
             ]
           },
           "color": "#1f8a5b",
           "costUsd": 4.2,
-          "massG": 8
+          "massG": 8,
+          "meshFile": "meshes/remote/board.glb"
         },
         {
           "id": "part:remote/screen",
@@ -584,9 +599,9 @@
           "group": "Electronics",
           "placement": {
             "position": [
-              25,
+              2,
               0,
-              24
+              23.2
             ],
             "rotation": [
               1,
@@ -597,19 +612,20 @@
           },
           "bounds": {
             "min": [
-              -15.0,
-              -9.0,
-              -1.5
+              -13.5,
+              -9.5,
+              -11.8
             ],
             "max": [
-              15.0,
-              9.0,
-              1.5
+              13.5,
+              9.5,
+              0.0
             ]
           },
           "color": "#16181c",
           "costUsd": 2.4,
-          "massG": 3
+          "massG": 3,
+          "meshFile": "meshes/remote/screen.glb"
         },
         {
           "id": "part:remote/joystick",
@@ -618,9 +634,9 @@
           "group": "Electronics",
           "placement": {
             "position": [
-              -25,
+              -32,
               0,
-              26
+              21
             ],
             "rotation": [
               1,
@@ -631,14 +647,14 @@
           },
           "bounds": {
             "min": [
-              -10.0,
-              -10.0,
-              -7.0
+              -9.0,
+              -9.0,
+              -11.3
             ],
             "max": [
-              10.0,
-              10.0,
-              7.0
+              12.25,
+              12.25,
+              11.0
             ]
           },
           "color": "#2b2d31",
@@ -655,11 +671,12 @@
               0
             ],
             "origin": [
-              -25,
+              -32,
               0,
-              20
+              21
             ]
-          }
+          },
+          "meshFile": "meshes/remote/joystick.glb"
         },
         {
           "id": "part:remote/buttons",
@@ -668,9 +685,9 @@
           "group": "Electronics",
           "placement": {
             "position": [
-              5,
+              32,
               0,
-              25
+              24
             ],
             "rotation": [
               1,
@@ -681,19 +698,20 @@
           },
           "bounds": {
             "min": [
-              -8.0,
-              -5.0,
-              -3.0
+              -9.2,
+              -9.7,
+              -12.4
             ],
             "max": [
-              8.0,
-              5.0,
-              3.0
+              9.2,
+              9.7,
+              2.4
             ]
           },
           "color": "#e8402f",
           "costUsd": 0.2,
-          "massG": 1
+          "massG": 1,
+          "meshFile": "meshes/remote/buttons.glb"
         },
         {
           "id": "part:remote/battery",
@@ -704,7 +722,7 @@
             "position": [
               0,
               0,
-              4
+              4.8
             ],
             "rotation": [
               1,
@@ -716,18 +734,19 @@
           "bounds": {
             "min": [
               -25.0,
-              -15.0,
-              -3.0
+              -14.4,
+              -2.8
             ],
             "max": [
-              25.0,
-              15.0,
-              3.0
+              27.0,
+              14.4,
+              2.9
             ]
           },
           "color": "#f2b705",
           "costUsd": 3.1,
-          "massG": 22
+          "massG": 22,
+          "meshFile": "meshes/remote/battery.glb"
         }
       ]
     }

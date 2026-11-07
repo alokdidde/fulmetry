@@ -1,0 +1,1493 @@
+{
+  "part:remote/battery": {
+    "meshFile": "meshes/remote/battery.glb",
+    "units": "mm",
+    "up": "+Z",
+    "bounds": {
+      "min": [
+        -25.0,
+        -14.4,
+        -2.8
+      ],
+      "max": [
+        27.0,
+        14.4,
+        2.9
+      ]
+    },
+    "materials": [
+      {
+        "key": "aluminium",
+        "name": "Aluminium",
+        "color": "#c9ccd1",
+        "baseColor": [
+          0.58408,
+          0.60383,
+          0.6376,
+          1.0
+        ],
+        "roughness": 0.4,
+        "metallic": 1.0
+      },
+      {
+        "key": "wrap-yellow",
+        "name": "Yellow PVC wrap",
+        "color": "#f2b705",
+        "baseColor": [
+          0.88792,
+          0.47353,
+          0.00152,
+          1.0
+        ],
+        "roughness": 0.35,
+        "metallic": 0.0
+      },
+      {
+        "key": "nylon-white",
+        "name": "Horn / connector nylon",
+        "color": "#f2f0e8",
+        "baseColor": [
+          0.88792,
+          0.87137,
+          0.80695,
+          1.0
+        ],
+        "roughness": 0.6,
+        "metallic": 0.0
+      },
+      {
+        "key": "wire-red",
+        "name": "Red wire",
+        "color": "#c62020",
+        "baseColor": [
+          0.56471,
+          0.01444,
+          0.01444,
+          1.0
+        ],
+        "roughness": 0.5,
+        "metallic": 0.0
+      },
+      {
+        "key": "wire-black",
+        "name": "Black wire",
+        "color": "#18181a",
+        "baseColor": [
+          0.00913,
+          0.00913,
+          0.01033,
+          1.0
+        ],
+        "roughness": 0.5,
+        "metallic": 0.0
+      }
+    ],
+    "triangles": 836,
+    "bytes": 31440
+  },
+  "part:remote/board": {
+    "meshFile": "meshes/remote/board.glb",
+    "units": "mm",
+    "up": "+Z",
+    "bounds": {
+      "min": [
+        -45.0,
+        -29.4,
+        -1.5
+      ],
+      "max": [
+        45.0,
+        26.0,
+        7.6
+      ]
+    },
+    "materials": [
+      {
+        "key": "gold",
+        "name": "Gold plating",
+        "color": "#e0b04a",
+        "baseColor": [
+          0.7454,
+          0.43415,
+          0.06848,
+          1.0
+        ],
+        "roughness": 0.25,
+        "metallic": 1.0
+      },
+      {
+        "key": "tin",
+        "name": "Tin shield",
+        "color": "#c9cbce",
+        "baseColor": [
+          0.58408,
+          0.5972,
+          0.61721,
+          1.0
+        ],
+        "roughness": 0.3,
+        "metallic": 1.0
+      },
+      {
+        "key": "pcb-green",
+        "name": "Green PCB",
+        "color": "#1d7a4e",
+        "baseColor": [
+          0.01229,
+          0.19462,
+          0.07619,
+          1.0
+        ],
+        "roughness": 0.4,
+        "metallic": 0.0
+      },
+      {
+        "key": "pcb-black",
+        "name": "Black PCB",
+        "color": "#1a1b1e",
+        "baseColor": [
+          0.01033,
+          0.01096,
+          0.01298,
+          1.0
+        ],
+        "roughness": 0.4,
+        "metallic": 0.0
+      },
+      {
+        "key": "plastic-black",
+        "name": "Black plastic",
+        "color": "#222326",
+        "baseColor": [
+          0.016,
+          0.01681,
+          0.01938,
+          1.0
+        ],
+        "roughness": 0.55,
+        "metallic": 0.0
+      },
+      {
+        "key": "ic-black",
+        "name": "IC epoxy",
+        "color": "#151517",
+        "baseColor": [
+          0.0075,
+          0.0075,
+          0.00857,
+          1.0
+        ],
+        "roughness": 0.7,
+        "metallic": 0.0
+      },
+      {
+        "key": "nylon-white",
+        "name": "Horn / connector nylon",
+        "color": "#f2f0e8",
+        "baseColor": [
+          0.88792,
+          0.87137,
+          0.80695,
+          1.0
+        ],
+        "roughness": 0.6,
+        "metallic": 0.0
+      },
+      {
+        "key": "led-green",
+        "name": "Green LED",
+        "color": "#3ddc6a",
+        "baseColor": [
+          0.04667,
+          0.71569,
+          0.14413,
+          1.0
+        ],
+        "roughness": 0.2,
+        "metallic": 0.0
+      },
+      {
+        "key": "led-amber",
+        "name": "Amber LED",
+        "color": "#ffb21a",
+        "baseColor": [
+          1.0,
+          0.4452,
+          0.01033,
+          1.0
+        ],
+        "roughness": 0.2,
+        "metallic": 0.0
+      },
+      {
+        "key": "ceramic",
+        "name": "MLCC ceramic",
+        "color": "#a88b62",
+        "baseColor": [
+          0.39157,
+          0.25818,
+          0.12214,
+          1.0
+        ],
+        "roughness": 0.6,
+        "metallic": 0.0
+      }
+    ],
+    "triangles": 12096,
+    "bytes": 390444
+  },
+  "part:remote/buttons": {
+    "meshFile": "meshes/remote/buttons.glb",
+    "units": "mm",
+    "up": "+Z",
+    "bounds": {
+      "min": [
+        -9.2,
+        -9.7,
+        -12.4
+      ],
+      "max": [
+        9.2,
+        9.7,
+        2.4
+      ]
+    },
+    "materials": [
+      {
+        "key": "pla-red",
+        "name": "Red PLA",
+        "color": "#c92a20",
+        "baseColor": [
+          0.58408,
+          0.02315,
+          0.01444,
+          1.0
+        ],
+        "roughness": 0.5,
+        "metallic": 0.0
+      },
+      {
+        "key": "plastic-black",
+        "name": "Black plastic",
+        "color": "#222326",
+        "baseColor": [
+          0.016,
+          0.01681,
+          0.01938,
+          1.0
+        ],
+        "roughness": 0.55,
+        "metallic": 0.0
+      },
+      {
+        "key": "steel",
+        "name": "Brushed steel",
+        "color": "#b4b8bd",
+        "baseColor": [
+          0.45641,
+          0.47932,
+          0.50888,
+          1.0
+        ],
+        "roughness": 0.35,
+        "metallic": 1.0
+      }
+    ],
+    "triangles": 4274,
+    "bytes": 122544
+  },
+  "part:remote/joystick": {
+    "meshFile": "meshes/remote/joystick.glb",
+    "units": "mm",
+    "up": "+Z",
+    "bounds": {
+      "min": [
+        -9.0,
+        -9.0,
+        -11.3
+      ],
+      "max": [
+        12.25,
+        12.25,
+        11.0
+      ]
+    },
+    "materials": [
+      {
+        "key": "tin",
+        "name": "Tin shield",
+        "color": "#c9cbce",
+        "baseColor": [
+          0.58408,
+          0.5972,
+          0.61721,
+          1.0
+        ],
+        "roughness": 0.3,
+        "metallic": 1.0
+      },
+      {
+        "key": "plastic-black",
+        "name": "Black plastic",
+        "color": "#222326",
+        "baseColor": [
+          0.016,
+          0.01681,
+          0.01938,
+          1.0
+        ],
+        "roughness": 0.55,
+        "metallic": 0.0
+      },
+      {
+        "key": "tpu-black",
+        "name": "Matte black TPU",
+        "color": "#1e1f22",
+        "baseColor": [
+          0.01298,
+          0.0137,
+          0.016,
+          1.0
+        ],
+        "roughness": 0.9,
+        "metallic": 0.0
+      }
+    ],
+    "triangles": 5189,
+    "bytes": 131412
+  },
+  "part:remote/screen": {
+    "meshFile": "meshes/remote/screen.glb",
+    "units": "mm",
+    "up": "+Z",
+    "bounds": {
+      "min": [
+        -13.5,
+        -9.5,
+        -11.8
+      ],
+      "max": [
+        13.5,
+        9.5,
+        0.0
+      ]
+    },
+    "materials": [
+      {
+        "key": "plastic-black",
+        "name": "Black plastic",
+        "color": "#222326",
+        "baseColor": [
+          0.016,
+          0.01681,
+          0.01938,
+          1.0
+        ],
+        "roughness": 0.55,
+        "metallic": 0.0
+      },
+      {
+        "key": "oled",
+        "name": "OLED glass",
+        "color": "#07080a",
+        "baseColor": [
+          0.00212,
+          0.00243,
+          0.00304,
+          1.0
+        ],
+        "roughness": 0.05,
+        "metallic": 0.0
+      },
+      {
+        "key": "pcb-blue",
+        "name": "Blue PCB",
+        "color": "#1d4fa0",
+        "baseColor": [
+          0.01229,
+          0.07819,
+          0.35153,
+          1.0
+        ],
+        "roughness": 0.4,
+        "metallic": 0.0
+      },
+      {
+        "key": "copper",
+        "name": "Copper",
+        "color": "#b8733a",
+        "baseColor": [
+          0.47932,
+          0.17144,
+          0.04231,
+          1.0
+        ],
+        "roughness": 0.35,
+        "metallic": 1.0
+      },
+      {
+        "key": "gold",
+        "name": "Gold plating",
+        "color": "#e0b04a",
+        "baseColor": [
+          0.7454,
+          0.43415,
+          0.06848,
+          1.0
+        ],
+        "roughness": 0.25,
+        "metallic": 1.0
+      },
+      {
+        "key": "tin",
+        "name": "Tin shield",
+        "color": "#c9cbce",
+        "baseColor": [
+          0.58408,
+          0.5972,
+          0.61721,
+          1.0
+        ],
+        "roughness": 0.3,
+        "metallic": 1.0
+      }
+    ],
+    "triangles": 2380,
+    "bytes": 79408
+  },
+  "part:remote/shell": {
+    "meshFile": "meshes/remote/shell.glb",
+    "units": "mm",
+    "up": "+Z",
+    "bounds": {
+      "min": [
+        -55.0,
+        -30.0,
+        -12.0
+      ],
+      "max": [
+        55.0,
+        30.0,
+        12.0
+      ]
+    },
+    "materials": [
+      {
+        "key": "pla-white",
+        "name": "White PLA",
+        "color": "#f2f1ed",
+        "baseColor": [
+          0.88792,
+          0.87962,
+          0.84687,
+          1.0
+        ],
+        "roughness": 0.5,
+        "metallic": 0.0
+      }
+    ],
+    "triangles": 12970,
+    "bytes": 331404
+  },
+  "part:rover/ball-caster": {
+    "meshFile": "meshes/rover/ball-caster.glb",
+    "units": "mm",
+    "up": "+Z",
+    "bounds": {
+      "min": [
+        -9.78,
+        -19.0,
+        -8.0
+      ],
+      "max": [
+        9.78,
+        19.0,
+        9.0
+      ]
+    },
+    "materials": [
+      {
+        "key": "plastic-black",
+        "name": "Black plastic",
+        "color": "#222326",
+        "baseColor": [
+          0.016,
+          0.01681,
+          0.01938,
+          1.0
+        ],
+        "roughness": 0.55,
+        "metallic": 0.0
+      },
+      {
+        "key": "chrome",
+        "name": "Chrome",
+        "color": "#e6e8ea",
+        "baseColor": [
+          0.7913,
+          0.80695,
+          0.82279,
+          1.0
+        ],
+        "roughness": 0.08,
+        "metallic": 1.0
+      }
+    ],
+    "triangles": 4819,
+    "bytes": 110360
+  },
+  "part:rover/battery": {
+    "meshFile": "meshes/rover/battery.glb",
+    "units": "mm",
+    "up": "+Z",
+    "bounds": {
+      "min": [
+        -18.65,
+        -33.45,
+        -9.45
+      ],
+      "max": [
+        18.65,
+        48.2,
+        9.47
+      ]
+    },
+    "materials": [
+      {
+        "key": "wrap-yellow",
+        "name": "Yellow PVC wrap",
+        "color": "#f2b705",
+        "baseColor": [
+          0.88792,
+          0.47353,
+          0.00152,
+          1.0
+        ],
+        "roughness": 0.35,
+        "metallic": 0.0
+      },
+      {
+        "key": "steel",
+        "name": "Brushed steel",
+        "color": "#b4b8bd",
+        "baseColor": [
+          0.45641,
+          0.47932,
+          0.50888,
+          1.0
+        ],
+        "roughness": 0.35,
+        "metallic": 1.0
+      },
+      {
+        "key": "tin",
+        "name": "Tin shield",
+        "color": "#c9cbce",
+        "baseColor": [
+          0.58408,
+          0.5972,
+          0.61721,
+          1.0
+        ],
+        "roughness": 0.3,
+        "metallic": 1.0
+      },
+      {
+        "key": "nylon-white",
+        "name": "Horn / connector nylon",
+        "color": "#f2f0e8",
+        "baseColor": [
+          0.88792,
+          0.87137,
+          0.80695,
+          1.0
+        ],
+        "roughness": 0.6,
+        "metallic": 0.0
+      },
+      {
+        "key": "pcb-blue",
+        "name": "Blue PCB",
+        "color": "#1d4fa0",
+        "baseColor": [
+          0.01229,
+          0.07819,
+          0.35153,
+          1.0
+        ],
+        "roughness": 0.4,
+        "metallic": 0.0
+      },
+      {
+        "key": "wire-red",
+        "name": "Red wire",
+        "color": "#c62020",
+        "baseColor": [
+          0.56471,
+          0.01444,
+          0.01444,
+          1.0
+        ],
+        "roughness": 0.5,
+        "metallic": 0.0
+      },
+      {
+        "key": "wire-black",
+        "name": "Black wire",
+        "color": "#18181a",
+        "baseColor": [
+          0.00913,
+          0.00913,
+          0.01033,
+          1.0
+        ],
+        "roughness": 0.5,
+        "metallic": 0.0
+      }
+    ],
+    "triangles": 16352,
+    "bytes": 389148
+  },
+  "part:rover/camera-head": {
+    "meshFile": "meshes/rover/camera-head.glb",
+    "units": "mm",
+    "up": "+Z",
+    "bounds": {
+      "min": [
+        -20.0,
+        -18.0,
+        0.0
+      ],
+      "max": [
+        28.5,
+        18.0,
+        30.0
+      ]
+    },
+    "materials": [
+      {
+        "key": "pla-red",
+        "name": "Red PLA",
+        "color": "#c92a20",
+        "baseColor": [
+          0.58408,
+          0.02315,
+          0.01444,
+          1.0
+        ],
+        "roughness": 0.5,
+        "metallic": 0.0
+      },
+      {
+        "key": "plastic-black",
+        "name": "Black plastic",
+        "color": "#222326",
+        "baseColor": [
+          0.016,
+          0.01681,
+          0.01938,
+          1.0
+        ],
+        "roughness": 0.55,
+        "metallic": 0.0
+      },
+      {
+        "key": "glass",
+        "name": "Lens glass",
+        "color": "#0d1420",
+        "baseColor": [
+          0.00402,
+          0.007,
+          0.01444,
+          1.0
+        ],
+        "roughness": 0.03,
+        "metallic": 0.2
+      },
+      {
+        "key": "led-amber",
+        "name": "Amber LED",
+        "color": "#ffb21a",
+        "baseColor": [
+          1.0,
+          0.4452,
+          0.01033,
+          1.0
+        ],
+        "roughness": 0.2,
+        "metallic": 0.0
+      },
+      {
+        "key": "steel",
+        "name": "Brushed steel",
+        "color": "#b4b8bd",
+        "baseColor": [
+          0.45641,
+          0.47932,
+          0.50888,
+          1.0
+        ],
+        "roughness": 0.35,
+        "metallic": 1.0
+      }
+    ],
+    "triangles": 18034,
+    "bytes": 473636
+  },
+  "part:rover/chassis-tub": {
+    "meshFile": "meshes/rover/chassis-tub.glb",
+    "units": "mm",
+    "up": "+Z",
+    "bounds": {
+      "min": [
+        -80.0,
+        -60.0,
+        -20.0
+      ],
+      "max": [
+        80.0,
+        60.0,
+        20.0
+      ]
+    },
+    "materials": [
+      {
+        "key": "petg-white",
+        "name": "White PETG",
+        "color": "#efeeea",
+        "baseColor": [
+          0.86316,
+          0.85499,
+          0.82279,
+          1.0
+        ],
+        "roughness": 0.55,
+        "metallic": 0.0
+      }
+    ],
+    "triangles": 25996,
+    "bytes": 699832
+  },
+  "part:rover/fasteners": {
+    "meshFile": "meshes/rover/fasteners.glb",
+    "units": "mm",
+    "up": "+Z",
+    "bounds": {
+      "min": [
+        -74.85,
+        -60.51,
+        -37.36
+      ],
+      "max": [
+        74.85,
+        60.51,
+        18.89
+      ]
+    },
+    "materials": [
+      {
+        "key": "steel",
+        "name": "Brushed steel",
+        "color": "#b4b8bd",
+        "baseColor": [
+          0.45641,
+          0.47932,
+          0.50888,
+          1.0
+        ],
+        "roughness": 0.35,
+        "metallic": 1.0
+      },
+      {
+        "key": "brass",
+        "name": "Brass",
+        "color": "#c8a24a",
+        "baseColor": [
+          0.57758,
+          0.36131,
+          0.06848,
+          1.0
+        ],
+        "roughness": 0.35,
+        "metallic": 1.0
+      }
+    ],
+    "triangles": 27068,
+    "bytes": 749672
+  },
+  "part:rover/main-board": {
+    "meshFile": "meshes/rover/main-board.glb",
+    "units": "mm",
+    "up": "+Z",
+    "bounds": {
+      "min": [
+        -31.0,
+        -22.5,
+        -3.0
+      ],
+      "max": [
+        30.0,
+        22.5,
+        10.1
+      ]
+    },
+    "materials": [
+      {
+        "key": "gold",
+        "name": "Gold plating",
+        "color": "#e0b04a",
+        "baseColor": [
+          0.7454,
+          0.43415,
+          0.06848,
+          1.0
+        ],
+        "roughness": 0.25,
+        "metallic": 1.0
+      },
+      {
+        "key": "pcb-green",
+        "name": "Green PCB",
+        "color": "#1d7a4e",
+        "baseColor": [
+          0.01229,
+          0.19462,
+          0.07619,
+          1.0
+        ],
+        "roughness": 0.4,
+        "metallic": 0.0
+      },
+      {
+        "key": "pcb-black",
+        "name": "Black PCB",
+        "color": "#1a1b1e",
+        "baseColor": [
+          0.01033,
+          0.01096,
+          0.01298,
+          1.0
+        ],
+        "roughness": 0.4,
+        "metallic": 0.0
+      },
+      {
+        "key": "tin",
+        "name": "Tin shield",
+        "color": "#c9cbce",
+        "baseColor": [
+          0.58408,
+          0.5972,
+          0.61721,
+          1.0
+        ],
+        "roughness": 0.3,
+        "metallic": 1.0
+      },
+      {
+        "key": "plastic-black",
+        "name": "Black plastic",
+        "color": "#222326",
+        "baseColor": [
+          0.016,
+          0.01681,
+          0.01938,
+          1.0
+        ],
+        "roughness": 0.55,
+        "metallic": 0.0
+      },
+      {
+        "key": "ic-black",
+        "name": "IC epoxy",
+        "color": "#151517",
+        "baseColor": [
+          0.0075,
+          0.0075,
+          0.00857,
+          1.0
+        ],
+        "roughness": 0.7,
+        "metallic": 0.0
+      },
+      {
+        "key": "nylon-white",
+        "name": "Horn / connector nylon",
+        "color": "#f2f0e8",
+        "baseColor": [
+          0.88792,
+          0.87137,
+          0.80695,
+          1.0
+        ],
+        "roughness": 0.6,
+        "metallic": 0.0
+      },
+      {
+        "key": "led-green",
+        "name": "Green LED",
+        "color": "#3ddc6a",
+        "baseColor": [
+          0.04667,
+          0.71569,
+          0.14413,
+          1.0
+        ],
+        "roughness": 0.2,
+        "metallic": 0.0
+      },
+      {
+        "key": "ceramic",
+        "name": "MLCC ceramic",
+        "color": "#a88b62",
+        "baseColor": [
+          0.39157,
+          0.25818,
+          0.12214,
+          1.0
+        ],
+        "roughness": 0.6,
+        "metallic": 0.0
+      },
+      {
+        "key": "pcb-trace",
+        "name": "PCB track under mask",
+        "color": "#2c9a64",
+        "baseColor": [
+          0.02519,
+          0.32314,
+          0.12744,
+          1.0
+        ],
+        "roughness": 0.35,
+        "metallic": 0.0
+      }
+    ],
+    "triangles": 13812,
+    "bytes": 476196
+  },
+  "part:rover/motor-driver": {
+    "meshFile": "meshes/rover/motor-driver.glb",
+    "units": "mm",
+    "up": "+Z",
+    "bounds": {
+      "min": [
+        -15.0,
+        -12.5,
+        -3.0
+      ],
+      "max": [
+        15.0,
+        12.5,
+        11.2
+      ]
+    },
+    "materials": [
+      {
+        "key": "tin",
+        "name": "Tin shield",
+        "color": "#c9cbce",
+        "baseColor": [
+          0.58408,
+          0.5972,
+          0.61721,
+          1.0
+        ],
+        "roughness": 0.3,
+        "metallic": 1.0
+      },
+      {
+        "key": "pcb-blue",
+        "name": "Blue PCB",
+        "color": "#1d4fa0",
+        "baseColor": [
+          0.01229,
+          0.07819,
+          0.35153,
+          1.0
+        ],
+        "roughness": 0.4,
+        "metallic": 0.0
+      },
+      {
+        "key": "terminal-green",
+        "name": "Screw terminal",
+        "color": "#2f9a52",
+        "baseColor": [
+          0.02843,
+          0.32314,
+          0.08438,
+          1.0
+        ],
+        "roughness": 0.5,
+        "metallic": 0.0
+      },
+      {
+        "key": "steel",
+        "name": "Brushed steel",
+        "color": "#b4b8bd",
+        "baseColor": [
+          0.45641,
+          0.47932,
+          0.50888,
+          1.0
+        ],
+        "roughness": 0.35,
+        "metallic": 1.0
+      },
+      {
+        "key": "plastic-black",
+        "name": "Black plastic",
+        "color": "#222326",
+        "baseColor": [
+          0.016,
+          0.01681,
+          0.01938,
+          1.0
+        ],
+        "roughness": 0.55,
+        "metallic": 0.0
+      },
+      {
+        "key": "gold",
+        "name": "Gold plating",
+        "color": "#e0b04a",
+        "baseColor": [
+          0.7454,
+          0.43415,
+          0.06848,
+          1.0
+        ],
+        "roughness": 0.25,
+        "metallic": 1.0
+      },
+      {
+        "key": "ic-black",
+        "name": "IC epoxy",
+        "color": "#151517",
+        "baseColor": [
+          0.0075,
+          0.0075,
+          0.00857,
+          1.0
+        ],
+        "roughness": 0.7,
+        "metallic": 0.0
+      },
+      {
+        "key": "aluminium",
+        "name": "Aluminium",
+        "color": "#c9ccd1",
+        "baseColor": [
+          0.58408,
+          0.60383,
+          0.6376,
+          1.0
+        ],
+        "roughness": 0.4,
+        "metallic": 1.0
+      },
+      {
+        "key": "ceramic",
+        "name": "MLCC ceramic",
+        "color": "#a88b62",
+        "baseColor": [
+          0.39157,
+          0.25818,
+          0.12214,
+          1.0
+        ],
+        "roughness": 0.6,
+        "metallic": 0.0
+      },
+      {
+        "key": "led-amber",
+        "name": "Amber LED",
+        "color": "#ffb21a",
+        "baseColor": [
+          1.0,
+          0.4452,
+          0.01033,
+          1.0
+        ],
+        "roughness": 0.2,
+        "metallic": 0.0
+      }
+    ],
+    "triangles": 14656,
+    "bytes": 446536
+  },
+  "part:rover/motor-l": {
+    "meshFile": "meshes/rover/motor-l.glb",
+    "units": "mm",
+    "up": "+Z",
+    "bounds": {
+      "min": [
+        -6.0,
+        -28.4,
+        -5.0
+      ],
+      "max": [
+        6.0,
+        10.0,
+        5.0
+      ]
+    },
+    "materials": [
+      {
+        "key": "steel",
+        "name": "Brushed steel",
+        "color": "#b4b8bd",
+        "baseColor": [
+          0.45641,
+          0.47932,
+          0.50888,
+          1.0
+        ],
+        "roughness": 0.35,
+        "metallic": 1.0
+      },
+      {
+        "key": "brass",
+        "name": "Brass",
+        "color": "#c8a24a",
+        "baseColor": [
+          0.57758,
+          0.36131,
+          0.06848,
+          1.0
+        ],
+        "roughness": 0.35,
+        "metallic": 1.0
+      },
+      {
+        "key": "plastic-black",
+        "name": "Black plastic",
+        "color": "#222326",
+        "baseColor": [
+          0.016,
+          0.01681,
+          0.01938,
+          1.0
+        ],
+        "roughness": 0.55,
+        "metallic": 0.0
+      },
+      {
+        "key": "copper",
+        "name": "Copper",
+        "color": "#b8733a",
+        "baseColor": [
+          0.47932,
+          0.17144,
+          0.04231,
+          1.0
+        ],
+        "roughness": 0.35,
+        "metallic": 1.0
+      }
+    ],
+    "triangles": 7772,
+    "bytes": 259344
+  },
+  "part:rover/motor-r": {
+    "meshFile": "meshes/rover/motor-r.glb",
+    "units": "mm",
+    "up": "+Z",
+    "bounds": {
+      "min": [
+        -6.0,
+        -10.0,
+        -5.0
+      ],
+      "max": [
+        6.0,
+        28.4,
+        5.0
+      ]
+    },
+    "materials": [
+      {
+        "key": "steel",
+        "name": "Brushed steel",
+        "color": "#b4b8bd",
+        "baseColor": [
+          0.45641,
+          0.47932,
+          0.50888,
+          1.0
+        ],
+        "roughness": 0.35,
+        "metallic": 1.0
+      },
+      {
+        "key": "brass",
+        "name": "Brass",
+        "color": "#c8a24a",
+        "baseColor": [
+          0.57758,
+          0.36131,
+          0.06848,
+          1.0
+        ],
+        "roughness": 0.35,
+        "metallic": 1.0
+      },
+      {
+        "key": "plastic-black",
+        "name": "Black plastic",
+        "color": "#222326",
+        "baseColor": [
+          0.016,
+          0.01681,
+          0.01938,
+          1.0
+        ],
+        "roughness": 0.55,
+        "metallic": 0.0
+      },
+      {
+        "key": "copper",
+        "name": "Copper",
+        "color": "#b8733a",
+        "baseColor": [
+          0.47932,
+          0.17144,
+          0.04231,
+          1.0
+        ],
+        "roughness": 0.35,
+        "metallic": 1.0
+      }
+    ],
+    "triangles": 7772,
+    "bytes": 259340
+  },
+  "part:rover/pan-servo": {
+    "meshFile": "meshes/rover/pan-servo.glb",
+    "units": "mm",
+    "up": "+Z",
+    "bounds": {
+      "min": [
+        -26.6,
+        -6.1,
+        0.0
+      ],
+      "max": [
+        15.8,
+        6.1,
+        30.0
+      ]
+    },
+    "materials": [
+      {
+        "key": "servo-blue",
+        "name": "Servo case (blue ABS)",
+        "color": "#2f6fe8",
+        "baseColor": [
+          0.02843,
+          0.15896,
+          0.80695,
+          1.0
+        ],
+        "roughness": 0.45,
+        "metallic": 0.0
+      },
+      {
+        "key": "nylon-white",
+        "name": "Horn / connector nylon",
+        "color": "#f2f0e8",
+        "baseColor": [
+          0.88792,
+          0.87137,
+          0.80695,
+          1.0
+        ],
+        "roughness": 0.6,
+        "metallic": 0.0
+      },
+      {
+        "key": "steel",
+        "name": "Brushed steel",
+        "color": "#b4b8bd",
+        "baseColor": [
+          0.45641,
+          0.47932,
+          0.50888,
+          1.0
+        ],
+        "roughness": 0.35,
+        "metallic": 1.0
+      },
+      {
+        "key": "wire-brown",
+        "name": "Brown wire",
+        "color": "#5a3a22",
+        "baseColor": [
+          0.10224,
+          0.04231,
+          0.016,
+          1.0
+        ],
+        "roughness": 0.5,
+        "metallic": 0.0
+      },
+      {
+        "key": "wire-red",
+        "name": "Red wire",
+        "color": "#c62020",
+        "baseColor": [
+          0.56471,
+          0.01444,
+          0.01444,
+          1.0
+        ],
+        "roughness": 0.5,
+        "metallic": 0.0
+      },
+      {
+        "key": "wire-orange",
+        "name": "Orange wire",
+        "color": "#ee7a12",
+        "baseColor": [
+          0.85499,
+          0.19462,
+          0.00605,
+          1.0
+        ],
+        "roughness": 0.5,
+        "metallic": 0.0
+      }
+    ],
+    "triangles": 6668,
+    "bytes": 209728
+  },
+  "part:rover/top-shell": {
+    "meshFile": "meshes/rover/top-shell.glb",
+    "units": "mm",
+    "up": "+Z",
+    "bounds": {
+      "min": [
+        -80.0,
+        -60.0,
+        -4.0
+      ],
+      "max": [
+        80.0,
+        60.0,
+        15.0
+      ]
+    },
+    "materials": [
+      {
+        "key": "petg-white",
+        "name": "White PETG",
+        "color": "#efeeea",
+        "baseColor": [
+          0.86316,
+          0.85499,
+          0.82279,
+          1.0
+        ],
+        "roughness": 0.55,
+        "metallic": 0.0
+      }
+    ],
+    "triangles": 21464,
+    "bytes": 508952
+  },
+  "part:rover/wheel-l": {
+    "meshFile": "meshes/rover/wheel-l.glb",
+    "units": "mm",
+    "up": "+Z",
+    "bounds": {
+      "min": [
+        -30.0,
+        -7.0,
+        -30.0
+      ],
+      "max": [
+        30.0,
+        7.0,
+        30.0
+      ]
+    },
+    "materials": [
+      {
+        "key": "tpu-black",
+        "name": "Matte black TPU",
+        "color": "#1e1f22",
+        "baseColor": [
+          0.01298,
+          0.0137,
+          0.016,
+          1.0
+        ],
+        "roughness": 0.9,
+        "metallic": 0.0
+      },
+      {
+        "key": "petg-white",
+        "name": "White PETG",
+        "color": "#efeeea",
+        "baseColor": [
+          0.86316,
+          0.85499,
+          0.82279,
+          1.0
+        ],
+        "roughness": 0.55,
+        "metallic": 0.0
+      }
+    ],
+    "triangles": 12984,
+    "bytes": 355100
+  },
+  "part:rover/wheel-r": {
+    "meshFile": "meshes/rover/wheel-r.glb",
+    "units": "mm",
+    "up": "+Z",
+    "bounds": {
+      "min": [
+        -30.0,
+        -7.0,
+        -30.0
+      ],
+      "max": [
+        30.0,
+        7.0,
+        30.0
+      ]
+    },
+    "materials": [
+      {
+        "key": "tpu-black",
+        "name": "Matte black TPU",
+        "color": "#1e1f22",
+        "baseColor": [
+          0.01298,
+          0.0137,
+          0.016,
+          1.0
+        ],
+        "roughness": 0.9,
+        "metallic": 0.0
+      },
+      {
+        "key": "petg-white",
+        "name": "White PETG",
+        "color": "#efeeea",
+        "baseColor": [
+          0.86316,
+          0.85499,
+          0.82279,
+          1.0
+        ],
+        "roughness": 0.55,
+        "metallic": 0.0
+      }
+    ],
+    "triangles": 12984,
+    "bytes": 355100
+  }
+}
