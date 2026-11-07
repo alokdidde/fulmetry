@@ -1,0 +1,107 @@
+{
+  "_doc": "Which paths each stream may change. Branch prefix decides the stream. Checked by tools/check_ownership.py in CI.",
+  "streams": {
+    "int": {
+      "name": "Integrator",
+      "paths": [
+        "*"
+      ]
+    },
+    "contract": {
+      "name": "Contract change (integrator reviews)",
+      "paths": [
+        "contracts/",
+        "app/core/",
+        "app/tests/fakes/",
+        "app/tests/conformance/",
+        "app/tests/unit/test_fakes_conformance.cpp",
+        "docs/"
+      ]
+    },
+    "s1": {
+      "name": "Project model",
+      "paths": [
+        "app/project/",
+        "app/tests/project/",
+        "docs/streams/s1.md"
+      ]
+    },
+    "s2": {
+      "name": "Viewport",
+      "paths": [
+        "app/viewport/",
+        "docs/streams/s2.md"
+      ]
+    },
+    "s3": {
+      "name": "CAD kernel",
+      "paths": [
+        "app/cad/",
+        "docs/streams/s3.md"
+      ]
+    },
+    "s4": {
+      "name": "Simulation",
+      "paths": [
+        "app/sim/",
+        "docs/streams/s4.md"
+      ]
+    },
+    "s5": {
+      "name": "Workbench UI",
+      "paths": [
+        "app/ui/",
+        "docs/streams/s5.md"
+      ]
+    },
+    "s6": {
+      "name": "Sheets",
+      "paths": [
+        "app/sheets/",
+        "fixtures/rover/kicad/",
+        "docs/streams/s6.md"
+      ]
+    },
+    "s7": {
+      "name": "Agent bridge",
+      "paths": [
+        "app/net/",
+        "agent/provider-raven/",
+        "agent/t3code",
+        ".gitmodules",
+        "docs/streams/s7.md"
+      ]
+    },
+    "s8": {
+      "name": "Engine worker",
+      "paths": [
+        "worker/",
+        "docs/streams/s8.md",
+        "fixtures/rover/cad/"
+      ]
+    },
+    "s9": {
+      "name": "Toolkits",
+      "paths": [
+        "agent/maker-tools/",
+        "docs/streams/s9.md"
+      ]
+    },
+    "s10": {
+      "name": "Build and CI",
+      "paths": [
+        "CMakeLists.txt",
+        "CMakePresets.json",
+        "vcpkg.json",
+        ".github/",
+        "ci/",
+        "tools/",
+        "packaging/",
+        "fixtures/",
+        "third_party/",
+        "app/tests/CMakeLists.txt",
+        "docs/streams/s10.md"
+      ]
+    }
+  }
+}

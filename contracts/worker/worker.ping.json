@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "method": "worker.ping",
+  "since": "M0",
+  "params": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  },
+  "result": {
+    "type": "object",
+    "required": [
+      "version",
+      "engines"
+    ],
+    "properties": {
+      "version": {
+        "type": "string"
+      },
+      "engines": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

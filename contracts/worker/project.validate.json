@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "method": "project.validate",
+  "since": "M0",
+  "params": {
+    "type": "object",
+    "required": [
+      "manifest"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "manifest": {
+        "type": "object"
+      }
+    }
+  },
+  "result": {
+    "type": "object",
+    "required": [
+      "valid",
+      "errors"
+    ],
+    "properties": {
+      "valid": {
+        "type": "boolean"
+      },
+      "errors": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": [
+            "path",
+            "message"
+          ],
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}

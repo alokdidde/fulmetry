@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "method": "ecad.erc",
+  "since": "M4",
+  "params": {
+    "type": "object",
+    "required": [
+      "projectRoot",
+      "board"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "projectRoot": {
+        "type": "string"
+      },
+      "board": {
+        "type": "string"
+      }
+    }
+  },
+  "result": {
+    "type": "object",
+    "required": [
+      "errors",
+      "warnings",
+      "violations"
+    ],
+    "properties": {
+      "errors": {
+        "type": "integer"
+      },
+      "warnings": {
+        "type": "integer"
+      },
+      "violations": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "ref": {
+              "type": "string"
+            },
+            "pin": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            },
+            "severity": {
+              "enum": [
+                "error",
+                "warning"
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fulmetry.dev/schemas/project.schema.json",
+  "title": "Fulmetry project manifest",
+  "description": "fulmetry.project.json at the root of a project repo. Units: mm, g, USD, degrees.",
+  "type": "object",
+  "required": ["schemaVersion", "name", "objects"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "name": { "type": "string", "minLength": 1 },
+    "revision": { "$ref": "#/$defs/revision" },
+    "objects": { "type": "array", "items": { "$ref": "#/$defs/object" } },
+    "links": { "type": "array", "items": { "$ref": "#/$defs/link" } },
+    "checks": { "type": "array", "items": { "$ref": "#/$defs/check" } },
+    "comments": { "type": "array", "items": { "$ref": "#/$defs/comment" } }
+  },
+  "$defs": {
+    "vec3": { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3 },
+    "quat": { "type": "array", "items": { "type": "number" }, "minItems": 4, "maxItems": 4, "description": "w, x, y, z" },
+    "objectId": { "type": "string", "pattern": "^obj:[a-z0-9-]+$" },
+    "partId": { "type": "string", "pattern": "^part:[a-z0-9-]+/[a-z0-9-]+$" },
+    "revision": {
+      "type": "object", "additionalProperties": false, "required": ["number"],
+      "properties": { "id": { "type": "string" }, "number": { "type": "integer", "minimum": 0 }, "summary": { "type": "string" } }
+    },
+    "object": {
+      "type": "object", "additionalProperties": false, "required": ["id", "name", "parts"],
+      "properties": {
+        "id": { "$ref": "#/$defs/objectId" },
+        "name": { "type": "string" },
+        "parts": { "type": "array", "items": { "$ref": "#/$defs/part" } }
+      }
+    },
+    "part": {
+      "type": "object", "additionalProperties": false, "required": ["id", "name", "kind", "placement", "bounds"],
+      "properties": {
+        "id": { "$ref": "#/$defs/partId" },
+        "name": { "type": "string" },
+        "kind": { "enum": ["board", "printed", "actuator", "battery", "control", "hardware", "bought"] },
+        "group": { "enum": ["Printed", "Electronics", "Bought", "Fasteners"] },
+        "material": { "enum": ["PLA", "PETG", "ASA", "TPU 95A"] },
+        "color": { "type": "string", "pattern": "^#[0-9a-f]{6}$" },
+        "placement": {
+          "type": "object", "additionalProperties": false, "required": ["position", "rotation"],
+          "properties": { "position": { "$ref": "#/$defs/vec3" }, "rotation": { "$ref": "#/$defs/quat" } }
+        },
+        "bounds": {
+          "type": "object", "additionalProperties": false, "required": ["min", "max"],
+          "properties": { "min": { "$ref": "#/$defs/vec3" }, "max": { "$ref": "#/$defs/vec3" } }
+        },
+        "stepFile": { "type": "string" },
+        "meshFile": { "type": "string" },
+        "costUsd": { "type": "number", "minimum": 0 },
+        "massG": { "type": "number", "minimum": 0 },
+        "joint": {
+          "type": "object", "additionalProperties": false, "required": ["name", "type", "axis", "origin"],
+          "properties": {
+            "name": { "type": "string" },
+            "type": { "enum": ["revolute", "prismatic", "continuous", "fixed"] },
+            "minDeg": { "type": "number" }, "maxDeg": { "type": "number" },
+            "axis": { "$ref": "#/$defs/vec3" }, "origin": { "$ref": "#/$defs/vec3" }
+          }
+        }
+      }
+    },
+    "link": {
+      "type": "object", "additionalProperties": false, "required": ["from", "to", "label"],
+      "properties": { "from": { "$ref": "#/$defs/objectId" }, "to": { "$ref": "#/$defs/objectId" }, "label": { "type": "string" } }
+    },
+    "check": {
+      "type": "object", "additionalProperties": false, "required": ["id", "object", "name", "verdict"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^chk:" },
+        "object": { "$ref": "#/$defs/objectId" },
+        "name": { "type": "string" },
+        "verdict": { "enum": ["supported", "refuted", "unresolved"] },
+        "reason": { "type": "string" },
+        "inputs": { "type": "array", "items": { "$ref": "#/$defs/partId" } },
+        "inputHashes": { "type": "object", "additionalProperties": { "type": "string" } }
+      }
+    },
+    "comment": {
+      "type": "object", "additionalProperties": false, "required": ["id", "anchor", "text", "status"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^cmt:" },
+        "text": { "type": "string", "minLength": 1 },
+        "status": { "enum": ["open", "working", "resolved"] },
+        "agent": { "type": "string" },
+        "reply": { "type": "string" },
+        "anchor": {
+          "type": "object", "additionalProperties": false, "required": ["part"],
+          "properties": {
+            "part": { "$ref": "#/$defs/partId" },
+            "face": { "type": "string" },
+            "point": { "$ref": "#/$defs/vec3" },
+            "camera": {
+              "type": "object", "additionalProperties": false,
+              "properties": { "eye": { "$ref": "#/$defs/vec3" }, "target": { "$ref": "#/$defs/vec3" }, "fovDegrees": { "type": "number" } }
+            },
+            "sheetRef": { "type": "string" }, "sheetPin": { "type": "string" }, "sheetNet": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}

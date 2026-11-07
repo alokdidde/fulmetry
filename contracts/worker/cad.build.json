@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "method": "cad.build",
+  "since": "M2",
+  "params": {
+    "type": "object",
+    "required": [
+      "projectRoot",
+      "part"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "projectRoot": {
+        "type": "string"
+      },
+      "part": {
+        "type": "string"
+      }
+    }
+  },
+  "result": {
+    "type": "object",
+    "required": [
+      "stepFile",
+      "meshFile",
+      "sourceHash",
+      "bounds"
+    ],
+    "properties": {
+      "stepFile": {
+        "type": "string"
+      },
+      "meshFile": {
+        "type": "string"
+      },
+      "sourceHash": {
+        "type": "string"
+      },
+      "bounds": {
+        "type": "object",
+        "properties": {
+          "min": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3
+          },
+          "max": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3
+          }
+        }
+      }
+    }
+  }
+}

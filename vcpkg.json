@@ -1,0 +1,11 @@
+{
+  "name": "fulmetry",
+  "version": "0.0.1",
+  "description": "Dependencies for the full build. Fakes-only builds need none. Owned by S10.",
+  "dependencies": [
+    { "name": "opencascade", "platform": "!uwp" },
+    "mujoco",
+    "nlohmann-json",
+    "doctest"
+  ]
+}

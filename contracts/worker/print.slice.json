@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "method": "print.slice",
+  "since": "M4",
+  "params": {
+    "type": "object",
+    "required": [
+      "projectRoot",
+      "part",
+      "material"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "projectRoot": {
+        "type": "string"
+      },
+      "part": {
+        "type": "string"
+      },
+      "material": {
+        "enum": [
+          "PLA",
+          "PETG",
+          "ASA",
+          "TPU 95A"
+        ]
+      },
+      "layerHeightMm": {
+        "type": "number"
+      }
+    }
+  },
+  "result": {
+    "type": "object",
+    "required": [
+      "gcodeFile",
+      "printTimeS",
+      "filamentG",
+      "layers"
+    ],
+    "properties": {
+      "gcodeFile": {
+        "type": "string"
+      },
+      "printTimeS": {
+        "type": "number"
+      },
+      "filamentG": {
+        "type": "number"
+      },
+      "layers": {
+        "type": "integer"
+      }
+    }
+  }
+}

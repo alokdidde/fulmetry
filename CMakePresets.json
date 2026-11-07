@@ -1,0 +1,18 @@
+{
+  "version": 6,
+  "configurePresets": [
+    { "name": "dev", "displayName": "Fakes only (fast)", "generator": "Ninja", "binaryDir": "build/dev",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" } },
+    { "name": "ci", "inherits": "dev", "binaryDir": "build/ci",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "RelWithDebInfo", "CMAKE_COMPILE_WARNING_AS_ERROR": "ON" } },
+    { "name": "full", "inherits": "dev", "binaryDir": "build/full",
+      "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+      "cacheVariables": { "FULMETRY_WITH_RAVEN_GUI": "ON", "FULMETRY_WITH_WICKED": "ON",
+                          "FULMETRY_WITH_OCCT": "ON", "FULMETRY_WITH_MUJOCO": "ON" } }
+  ],
+  "buildPresets": [ { "name": "dev", "configurePreset": "dev" }, { "name": "ci", "configurePreset": "ci" } ],
+  "testPresets": [
+    { "name": "dev", "configurePreset": "dev", "output": { "outputOnFailure": true } },
+    { "name": "ci", "configurePreset": "ci", "output": { "outputOnFailure": true } }
+  ]
+}

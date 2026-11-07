@@ -1,0 +1,6 @@
+# Agents are not GitHub users, so per-stream ownership is enforced by tools/check_ownership.py
+# (see tools/streams.json). Human review is required on contracts and build files.
+/contracts/          @alokdidde
+/app/core/           @alokdidde
+/tools/streams.json  @alokdidde
+/AGENTS.md           @alokdidde

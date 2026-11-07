@@ -1,0 +1,24 @@
+# Full engine environment (S8). The M0 tests need only Python + jsonschema; engines join per milestone.
+[workspace]
+name = "fulmetry-worker"
+channels = ["conda-forge"]
+platforms = ["linux-64", "osx-arm64", "win-64"]
+
+[dependencies]
+python = "3.12.*"
+jsonschema = ">=4.21"
+pytest = ">=8"
+
+[feature.cad.dependencies]
+build123d = "*"
+
+[feature.ecad.dependencies]
+kicad = "*"
+
+[environments]
+default = []
+cad = ["cad"]
+ecad = ["ecad"]
+
+[tasks]
+test = "pytest -q"

@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "method": "sim.exportMjcf",
+  "since": "M4",
+  "params": {
+    "type": "object",
+    "required": [
+      "projectRoot",
+      "object"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "projectRoot": {
+        "type": "string"
+      },
+      "object": {
+        "type": "string"
+      }
+    }
+  },
+  "result": {
+    "type": "object",
+    "required": [
+      "mjcf"
+    ],
+    "properties": {
+      "mjcf": {
+        "type": "string"
+      }
+    }
+  }
+}

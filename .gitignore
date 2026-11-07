@@ -1,0 +1,9 @@
+build/
+.cache/
+compile_commands.json
+__pycache__/
+*.egg-info/
+.pytest_cache/
+.pixi/
+*.ppm
+.DS_Store

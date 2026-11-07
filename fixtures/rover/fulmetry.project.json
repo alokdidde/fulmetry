@@ -1,0 +1,812 @@
+{
+  "schemaVersion": 1,
+  "name": "Desk rover",
+  "revision": {
+    "id": "",
+    "number": 3,
+    "summary": "Camera head updated"
+  },
+  "objects": [
+    {
+      "id": "obj:rover",
+      "name": "Desk rover",
+      "parts": [
+        {
+          "id": "part:rover/chassis-tub",
+          "name": "Chassis tub",
+          "kind": "printed",
+          "group": "Printed",
+          "placement": {
+            "position": [
+              0,
+              0,
+              30
+            ],
+            "rotation": [
+              1,
+              0,
+              0,
+              0
+            ]
+          },
+          "bounds": {
+            "min": [
+              -80.0,
+              -60.0,
+              -20.0
+            ],
+            "max": [
+              80.0,
+              60.0,
+              20.0
+            ]
+          },
+          "color": "#f4f4f2",
+          "costUsd": 2.1,
+          "massG": 88,
+          "material": "PETG"
+        },
+        {
+          "id": "part:rover/top-shell",
+          "name": "Top shell",
+          "kind": "printed",
+          "group": "Printed",
+          "placement": {
+            "position": [
+              0,
+              0,
+              62
+            ],
+            "rotation": [
+              1,
+              0,
+              0,
+              0
+            ]
+          },
+          "bounds": {
+            "min": [
+              -82.0,
+              -62.0,
+              -12.0
+            ],
+            "max": [
+              82.0,
+              62.0,
+              12.0
+            ]
+          },
+          "color": "#f4f4f2",
+          "costUsd": 1.6,
+          "massG": 61,
+          "material": "PETG"
+        },
+        {
+          "id": "part:rover/camera-head",
+          "name": "Camera head",
+          "kind": "printed",
+          "group": "Printed",
+          "placement": {
+            "position": [
+              50,
+              0,
+              92
+            ],
+            "rotation": [
+              1,
+              0,
+              0,
+              0
+            ]
+          },
+          "bounds": {
+            "min": [
+              -20.0,
+              -18.0,
+              -15.0
+            ],
+            "max": [
+              20.0,
+              18.0,
+              15.0
+            ]
+          },
+          "color": "#e8402f",
+          "costUsd": 0.4,
+          "massG": 14,
+          "material": "PLA",
+          "joint": {
+            "name": "Head pan",
+            "type": "revolute",
+            "minDeg": -80,
+            "maxDeg": 80,
+            "axis": [
+              0,
+              0,
+              1
+            ],
+            "origin": [
+              50,
+              0,
+              76
+            ]
+          }
+        },
+        {
+          "id": "part:rover/wheel-l",
+          "name": "Left wheel",
+          "kind": "printed",
+          "group": "Printed",
+          "placement": {
+            "position": [
+              0,
+              68,
+              30
+            ],
+            "rotation": [
+              1,
+              0,
+              0,
+              0
+            ]
+          },
+          "bounds": {
+            "min": [
+              -30.0,
+              -7.0,
+              -30.0
+            ],
+            "max": [
+              30.0,
+              7.0,
+              30.0
+            ]
+          },
+          "color": "#2b2d31",
+          "costUsd": 0.5,
+          "massG": 18,
+          "material": "TPU 95A",
+          "joint": {
+            "name": "Left wheel",
+            "type": "continuous",
+            "axis": [
+              0,
+              1,
+              0
+            ],
+            "origin": [
+              0,
+              68,
+              30
+            ]
+          }
+        },
+        {
+          "id": "part:rover/wheel-r",
+          "name": "Right wheel",
+          "kind": "printed",
+          "group": "Printed",
+          "placement": {
+            "position": [
+              0,
+              -68,
+              30
+            ],
+            "rotation": [
+              1,
+              0,
+              0,
+              0
+            ]
+          },
+          "bounds": {
+            "min": [
+              -30.0,
+              -7.0,
+              -30.0
+            ],
+            "max": [
+              30.0,
+              7.0,
+              30.0
+            ]
+          },
+          "color": "#2b2d31",
+          "costUsd": 0.5,
+          "massG": 18,
+          "material": "TPU 95A",
+          "joint": {
+            "name": "Right wheel",
+            "type": "continuous",
+            "axis": [
+              0,
+              1,
+              0
+            ],
+            "origin": [
+              0,
+              -68,
+              30
+            ]
+          }
+        },
+        {
+          "id": "part:rover/motor-l",
+          "name": "Left gear motor",
+          "kind": "actuator",
+          "group": "Electronics",
+          "placement": {
+            "position": [
+              0,
+              40,
+              30
+            ],
+            "rotation": [
+              1,
+              0,
+              0,
+              0
+            ]
+          },
+          "bounds": {
+            "min": [
+              -12.5,
+              -10.0,
+              -6.0
+            ],
+            "max": [
+              12.5,
+              10.0,
+              6.0
+            ]
+          },
+          "color": "#c9ccd1",
+          "costUsd": 2.8,
+          "massG": 10
+        },
+        {
+          "id": "part:rover/motor-r",
+          "name": "Right gear motor",
+          "kind": "actuator",
+          "group": "Electronics",
+          "placement": {
+            "position": [
+              0,
+              -40,
+              30
+            ],
+            "rotation": [
+              1,
+              0,
+              0,
+              0
+            ]
+          },
+          "bounds": {
+            "min": [
+              -12.5,
+              -10.0,
+              -6.0
+            ],
+            "max": [
+              12.5,
+              10.0,
+              6.0
+            ]
+          },
+          "color": "#c9ccd1",
+          "costUsd": 2.8,
+          "massG": 10
+        },
+        {
+          "id": "part:rover/pan-servo",
+          "name": "Pan servo SG90",
+          "kind": "actuator",
+          "group": "Electronics",
+          "placement": {
+            "position": [
+              50,
+              0,
+              70
+            ],
+            "rotation": [
+              1,
+              0,
+              0,
+              0
+            ]
+          },
+          "bounds": {
+            "min": [
+              -11.5,
+              -6.0,
+              -11.0
+            ],
+            "max": [
+              11.5,
+              6.0,
+              11.0
+            ]
+          },
+          "color": "#2f6fe8",
+          "costUsd": 1.9,
+          "massG": 9
+        },
+        {
+          "id": "part:rover/main-board",
+          "name": "Main board",
+          "kind": "board",
+          "group": "Electronics",
+          "placement": {
+            "position": [
+              -20,
+              0,
+              40
+            ],
+            "rotation": [
+              1,
+              0,
+              0,
+              0
+            ]
+          },
+          "bounds": {
+            "min": [
+              -30.0,
+              -22.5,
+              -4.0
+            ],
+            "max": [
+              30.0,
+              22.5,
+              4.0
+            ]
+          },
+          "color": "#1f8a5b",
+          "costUsd": 6.5,
+          "massG": 12
+        },
+        {
+          "id": "part:rover/motor-driver",
+          "name": "Motor driver",
+          "kind": "board",
+          "group": "Electronics",
+          "placement": {
+            "position": [
+              -20,
+              0,
+              22
+            ],
+            "rotation": [
+              1,
+              0,
+              0,
+              0
+            ]
+          },
+          "bounds": {
+            "min": [
+              -15.0,
+              -12.5,
+              -3.0
+            ],
+            "max": [
+              15.0,
+              12.5,
+              3.0
+            ]
+          },
+          "color": "#13a3a3",
+          "costUsd": 1.8,
+          "massG": 4
+        },
+        {
+          "id": "part:rover/battery",
+          "name": "Battery pack",
+          "kind": "battery",
+          "group": "Electronics",
+          "placement": {
+            "position": [
+              -50,
+              0,
+              22
+            ],
+            "rotation": [
+              1,
+              0,
+              0,
+              0
+            ]
+          },
+          "bounds": {
+            "min": [
+              -35.0,
+              -17.5,
+              -10.0
+            ],
+            "max": [
+              35.0,
+              17.5,
+              10.0
+            ]
+          },
+          "color": "#f2b705",
+          "costUsd": 7.0,
+          "massG": 95
+        },
+        {
+          "id": "part:rover/ball-caster",
+          "name": "Ball caster",
+          "kind": "bought",
+          "group": "Bought",
+          "placement": {
+            "position": [
+              -65,
+              0,
+              8
+            ],
+            "rotation": [
+              1,
+              0,
+              0,
+              0
+            ]
+          },
+          "bounds": {
+            "min": [
+              -8.0,
+              -8.0,
+              -8.0
+            ],
+            "max": [
+              8.0,
+              8.0,
+              8.0
+            ]
+          },
+          "color": "#c9ccd1",
+          "costUsd": 0.6,
+          "massG": 6
+        },
+        {
+          "id": "part:rover/fasteners",
+          "name": "Screws and inserts",
+          "kind": "hardware",
+          "group": "Fasteners",
+          "placement": {
+            "position": [
+              0,
+              0,
+              50
+            ],
+            "rotation": [
+              1,
+              0,
+              0,
+              0
+            ]
+          },
+          "bounds": {
+            "min": [
+              -75.0,
+              -55.0,
+              -2.0
+            ],
+            "max": [
+              75.0,
+              55.0,
+              2.0
+            ]
+          },
+          "color": "#b08d57",
+          "costUsd": 1.2,
+          "massG": 11
+        }
+      ]
+    },
+    {
+      "id": "obj:remote",
+      "name": "Wireless remote",
+      "parts": [
+        {
+          "id": "part:remote/shell",
+          "name": "Remote shell",
+          "kind": "printed",
+          "group": "Printed",
+          "placement": {
+            "position": [
+              0,
+              0,
+              12
+            ],
+            "rotation": [
+              1,
+              0,
+              0,
+              0
+            ]
+          },
+          "bounds": {
+            "min": [
+              -55.0,
+              -30.0,
+              -12.0
+            ],
+            "max": [
+              55.0,
+              30.0,
+              12.0
+            ]
+          },
+          "color": "#f4f4f2",
+          "costUsd": 0.9,
+          "massG": 34,
+          "material": "PLA"
+        },
+        {
+          "id": "part:remote/board",
+          "name": "Remote board",
+          "kind": "board",
+          "group": "Electronics",
+          "placement": {
+            "position": [
+              0,
+              0,
+              10
+            ],
+            "rotation": [
+              1,
+              0,
+              0,
+              0
+            ]
+          },
+          "bounds": {
+            "min": [
+              -45.0,
+              -25.0,
+              -3.0
+            ],
+            "max": [
+              45.0,
+              25.0,
+              3.0
+            ]
+          },
+          "color": "#1f8a5b",
+          "costUsd": 4.2,
+          "massG": 8
+        },
+        {
+          "id": "part:remote/screen",
+          "name": "OLED screen",
+          "kind": "board",
+          "group": "Electronics",
+          "placement": {
+            "position": [
+              25,
+              0,
+              24
+            ],
+            "rotation": [
+              1,
+              0,
+              0,
+              0
+            ]
+          },
+          "bounds": {
+            "min": [
+              -15.0,
+              -9.0,
+              -1.5
+            ],
+            "max": [
+              15.0,
+              9.0,
+              1.5
+            ]
+          },
+          "color": "#16181c",
+          "costUsd": 2.4,
+          "massG": 3
+        },
+        {
+          "id": "part:remote/joystick",
+          "name": "Thumb joystick",
+          "kind": "control",
+          "group": "Electronics",
+          "placement": {
+            "position": [
+              -25,
+              0,
+              26
+            ],
+            "rotation": [
+              1,
+              0,
+              0,
+              0
+            ]
+          },
+          "bounds": {
+            "min": [
+              -10.0,
+              -10.0,
+              -7.0
+            ],
+            "max": [
+              10.0,
+              10.0,
+              7.0
+            ]
+          },
+          "color": "#2b2d31",
+          "costUsd": 0.8,
+          "massG": 5,
+          "joint": {
+            "name": "Stick",
+            "type": "revolute",
+            "minDeg": -25,
+            "maxDeg": 25,
+            "axis": [
+              1,
+              0,
+              0
+            ],
+            "origin": [
+              -25,
+              0,
+              20
+            ]
+          }
+        },
+        {
+          "id": "part:remote/buttons",
+          "name": "A and B buttons",
+          "kind": "control",
+          "group": "Electronics",
+          "placement": {
+            "position": [
+              5,
+              0,
+              25
+            ],
+            "rotation": [
+              1,
+              0,
+              0,
+              0
+            ]
+          },
+          "bounds": {
+            "min": [
+              -8.0,
+              -5.0,
+              -3.0
+            ],
+            "max": [
+              8.0,
+              5.0,
+              3.0
+            ]
+          },
+          "color": "#e8402f",
+          "costUsd": 0.2,
+          "massG": 1
+        },
+        {
+          "id": "part:remote/battery",
+          "name": "Remote battery",
+          "kind": "battery",
+          "group": "Electronics",
+          "placement": {
+            "position": [
+              0,
+              0,
+              4
+            ],
+            "rotation": [
+              1,
+              0,
+              0,
+              0
+            ]
+          },
+          "bounds": {
+            "min": [
+              -25.0,
+              -15.0,
+              -3.0
+            ],
+            "max": [
+              25.0,
+              15.0,
+              3.0
+            ]
+          },
+          "color": "#f2b705",
+          "costUsd": 3.1,
+          "massG": 22
+        }
+      ]
+    }
+  ],
+  "links": [
+    {
+      "from": "obj:remote",
+      "to": "obj:rover",
+      "label": "ESP-NOW 2.4 GHz"
+    }
+  ],
+  "checks": [
+    {
+      "id": "chk:rover/rug",
+      "object": "obj:rover",
+      "name": "Drives on an 8 mm rug",
+      "verdict": "refuted",
+      "reason": "Ø60 mm wheels slowed to 35% on the rug and stalled twice",
+      "inputs": [
+        "part:rover/wheel-l",
+        "part:rover/wheel-r"
+      ]
+    },
+    {
+      "id": "chk:rover/tilt",
+      "object": "obj:rover",
+      "name": "Stable at 15° tilt",
+      "verdict": "supported",
+      "reason": "",
+      "inputs": [
+        "part:rover/battery",
+        "part:rover/chassis-tub"
+      ]
+    },
+    {
+      "id": "chk:rover/erc",
+      "object": "obj:rover",
+      "name": "Main board ERC",
+      "verdict": "supported",
+      "reason": "",
+      "inputs": [
+        "part:rover/main-board"
+      ]
+    },
+    {
+      "id": "chk:rover/fit",
+      "object": "obj:rover",
+      "name": "Board fits the tub",
+      "verdict": "supported",
+      "reason": "",
+      "inputs": [
+        "part:rover/main-board",
+        "part:rover/chassis-tub"
+      ]
+    },
+    {
+      "id": "chk:remote/range",
+      "object": "obj:remote",
+      "name": "Link range 10 m",
+      "verdict": "unresolved",
+      "reason": "Not tested since the antenna moved",
+      "inputs": [
+        "part:remote/board"
+      ]
+    }
+  ],
+  "comments": [
+    {
+      "id": "cmt:1",
+      "anchor": {
+        "part": "part:rover/wheel-l",
+        "point": [
+          0,
+          75,
+          55
+        ]
+      },
+      "text": "It has to drive on the rug… make the wheels bigger with more grip",
+      "status": "open"
+    }
+  ]
+}

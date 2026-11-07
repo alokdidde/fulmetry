@@ -1,0 +1,175 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Fulmetry extensions to the T3 Code wire protocol",
+  "description": "Sent as T3 Code thread metadata and server push events. v0 draft; S7 confirms against packages/contracts in M1.",
+  "$defs": {
+    "anchor": {
+      "$ref": "../schemas/project.schema.json#/$defs/comment/properties/anchor"
+    },
+    "startAgentForComment": {
+      "type": "object",
+      "required": [
+        "type",
+        "commentId",
+        "anchor",
+        "text",
+        "projectRoot"
+      ],
+      "properties": {
+        "type": {
+          "const": "fulmetry.startAgentForComment"
+        },
+        "commentId": {
+          "type": "string"
+        },
+        "anchor": {
+          "$ref": "#/$defs/anchor"
+        },
+        "text": {
+          "type": "string"
+        },
+        "projectRoot": {
+          "type": "string"
+        },
+        "renderPng": {
+          "type": "string",
+          "contentEncoding": "base64"
+        }
+      }
+    },
+    "agentUpdated": {
+      "type": "object",
+      "required": [
+        "type",
+        "agentId",
+        "name",
+        "state",
+        "step"
+      ],
+      "properties": {
+        "type": {
+          "const": "fulmetry.agentUpdated"
+        },
+        "agentId": {
+          "type": "string"
+        },
+        "threadId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "starting",
+            "working",
+            "done",
+            "failed"
+          ]
+        },
+        "step": {
+          "type": "string"
+        },
+        "preview": {
+          "type": "string"
+        },
+        "parts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "replies": {
+          "type": "integer"
+        },
+        "commentId": {
+          "type": "string"
+        }
+      }
+    },
+    "revisionSaved": {
+      "type": "object",
+      "required": [
+        "type",
+        "number",
+        "sha"
+      ],
+      "properties": {
+        "type": {
+          "const": "fulmetry.revisionSaved"
+        },
+        "number": {
+          "type": "integer"
+        },
+        "sha": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "changedParts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "checkUpdated": {
+      "type": "object",
+      "required": [
+        "type",
+        "checkId",
+        "verdict"
+      ],
+      "properties": {
+        "type": {
+          "const": "fulmetry.checkUpdated"
+        },
+        "checkId": {
+          "type": "string"
+        },
+        "verdict": {
+          "enum": [
+            "supported",
+            "refuted",
+            "unresolved"
+          ]
+        },
+        "reason": {
+          "type": "string"
+        }
+      }
+    },
+    "jobProgress": {
+      "type": "object",
+      "required": [
+        "type",
+        "jobId",
+        "fraction"
+      ],
+      "properties": {
+        "type": {
+          "const": "fulmetry.jobProgress"
+        },
+        "jobId": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "fraction": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "message": {
+          "type": "string"
+        },
+        "done": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
