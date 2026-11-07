@@ -277,7 +277,11 @@ int main(int argc, char** argv) {
         viewport::WickedOptions wo;
         wo.assetRoot = std::filesystem::absolute(o.project).parent_path().string();  // meshFile paths
         auto wicked = std::make_unique<viewport::WickedViewport>(wo);
-        if (auto st = wicked->loadProject(project.value()); !st.ok()) {
+        // The engine starts on the first render: one small one tells whether this machine's GPU can run it.
+        Status st = wicked->loadProject(project.value());
+        if (st.ok())
+            if (auto probe = wicked->renderToImage(16, 16); !probe.ok()) st = probe.error();
+        if (!st.ok()) {
             // No GPU the engine can use: the still stage, so the rest of the workbench still works.
             std::printf("stage: still image, the live stage cannot start: %s\n", st.error().message.c_str());
         } else {
