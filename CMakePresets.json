@@ -5,15 +5,32 @@
       "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" } },
     { "name": "ci", "inherits": "dev", "binaryDir": "build/ci",
       "cacheVariables": { "CMAKE_BUILD_TYPE": "RelWithDebInfo", "CMAKE_COMPILE_WARNING_AS_ERROR": "ON" } },
+    { "name": "ci-mujoco", "displayName": "CI: MuJoCo (MUJOCO_ROOT from env, see tools/deps.json)", "inherits": "ci",
+      "binaryDir": "build/ci-mujoco",
+      "cacheVariables": { "FULMETRY_WITH_MUJOCO": "ON", "MUJOCO_ROOT": "$env{MUJOCO_ROOT}" } },
+    { "name": "ci-wicked", "displayName": "CI: Wicked Engine (WICKED_ROOT from env, see tools/deps.json)",
+      "inherits": "ci", "binaryDir": "build/ci-wicked",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release", "FULMETRY_WITH_WICKED": "ON", "WICKED_ROOT": "$env{WICKED_ROOT}",
+                          "CMAKE_CXX_FLAGS": "-Wno-error=maybe-uninitialized" } },
+    { "name": "ci-raven", "displayName": "CI: Raven GUI (RAVEN_GUI_ROOT from env, see tools/deps.json)",
+      "inherits": "ci", "binaryDir": "build/ci-raven",
+      "cacheVariables": { "FULMETRY_WITH_RAVEN_GUI": "ON", "RAVEN_GUI_ROOT": "$env{RAVEN_GUI_ROOT}" } },
     { "name": "full", "inherits": "dev", "binaryDir": "build/full",
       "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
       "cacheVariables": { "FULMETRY_WITH_RAVEN_GUI": "ON", "FULMETRY_WITH_WICKED": "ON",
                           "FULMETRY_WITH_OCCT": "ON", "FULMETRY_WITH_MUJOCO": "ON" } }
   ],
-  "buildPresets": [ { "name": "dev", "configurePreset": "dev" }, { "name": "ci", "configurePreset": "ci" } ],
+  "buildPresets": [
+    { "name": "dev", "configurePreset": "dev" }, { "name": "ci", "configurePreset": "ci" },
+    { "name": "ci-mujoco", "configurePreset": "ci-mujoco" }, { "name": "ci-wicked", "configurePreset": "ci-wicked" },
+    { "name": "ci-raven", "configurePreset": "ci-raven" }
+  ],
   "testPresets": [
     { "name": "dev", "configurePreset": "dev", "output": { "outputOnFailure": true } },
     { "name": "ci", "configurePreset": "ci", "output": { "outputOnFailure": true },
-      "execution": { "noTestsAction": "error", "timeout": 300 } }
+      "execution": { "noTestsAction": "error", "timeout": 300 } },
+    { "name": "ci-mujoco", "inherits": "ci", "configurePreset": "ci-mujoco" },
+    { "name": "ci-wicked", "inherits": "ci", "configurePreset": "ci-wicked" },
+    { "name": "ci-raven", "inherits": "ci", "configurePreset": "ci-raven" }
   ]
 }
