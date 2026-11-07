@@ -7,3 +7,4 @@ __pycache__/
 .pixi/
 *.ppm
 .DS_Store
+.fulmetry/
