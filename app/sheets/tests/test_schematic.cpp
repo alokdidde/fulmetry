@@ -1,5 +1,7 @@
 #include <doctest/doctest.h>
 
+#include <ostream>  // MSVC: doctest streams std::string_view and needs the full ostream type
+
 #include <string>
 
 #include "SheetsTestSupport.h"
