@@ -1,7 +1,7 @@
 # Owner: S5 Workbench UI.
 # fulmetry_ui: what the workbench shows (WorkbenchModel), GUI-free, always built and unit-tested.
 # With FULMETRY_WITH_RAVEN_GUI=ON: fulmetry_ui_raven (the Raven view) and fulmetry_workbench (the shell).
-add_library(fulmetry_ui STATIC src/WorkbenchModel.cpp)
+add_library(fulmetry_ui STATIC src/WorkbenchModel.cpp src/DriveTest.cpp)
 target_include_directories(fulmetry_ui PUBLIC include)
 target_link_libraries(fulmetry_ui PUBLIC fulmetry_core PRIVATE fulmetry_third_party)
 
@@ -33,7 +33,7 @@ if(FULMETRY_WITH_RAVEN_GUI)
   add_subdirectory(spike)
 
   add_library(fulmetry_ui_raven STATIC raven/Kit.cpp raven/StageImage.cpp raven/WorkbenchView.cpp raven/WorkbenchHarness.cpp
-                                       raven/LiveStage.cpp)
+                                       raven/LiveStage.cpp raven/SimulateMode.cpp)
   target_include_directories(fulmetry_ui_raven PUBLIC raven)
   target_link_libraries(fulmetry_ui_raven PUBLIC fulmetry_ui raven::raven)
 
@@ -41,7 +41,8 @@ if(FULMETRY_WITH_RAVEN_GUI)
   target_include_directories(fulmetry_workbench PRIVATE ${PROJECT_SOURCE_DIR}/app/tests)
   # With FULMETRY_WITH_WICKED the stage is the live Wicked render (fulmetry_viewport defines FULMETRY_HAS_WICKED);
   # without it, fulmetry_viewport is an interface target and the stage shows assets/stage/rover-highkey.png.
-  target_link_libraries(fulmetry_workbench PRIVATE fulmetry_ui_raven fulmetry_project fulmetry_viewport
+  # fulmetry_sim brings MuJoCo for Simulate when FULMETRY_WITH_MUJOCO is on (FULMETRY_HAS_MUJOCO); else the fake.
+  target_link_libraries(fulmetry_workbench PRIVATE fulmetry_ui_raven fulmetry_project fulmetry_viewport fulmetry_sim
                                                    fulmetry_third_party)
   if(FULMETRY_WITH_WICKED)
     fulmetry_wicked_runtime(fulmetry_workbench)
@@ -67,5 +68,14 @@ if(FULMETRY_WITH_RAVEN_GUI)
     set_tests_properties(ui_workbench_onboarding PROPERTIES
       PASS_REGULAR_EXPRESSION "onboarding open.*harness answer: raven.*new agents run on: raven/claude-sonnet-5-5\nframes: [0-9]+, raven reports: 0"
       ENVIRONMENT "RAVEN_LIVE_RELOAD=0;FULMETRY_CONFIG_DIR=${CMAKE_CURRENT_BINARY_DIR}/test-config")
+    if(FULMETRY_WITH_WICKED)
+      # Simulate: the scripted living-room drive to its end on the live stage (MuJoCo when the build has it); the
+      # rug crossing and the top speed are measured and the card shows them.
+      add_test(NAME ui_workbench_simulate
+        COMMAND fulmetry_workbench --headless --strict --frames 30 --simulate --sim-seconds 7.3)
+      set_tests_properties(ui_workbench_simulate PROPERTIES
+        PASS_REGULAR_EXPRESSION "simulate on.*simulate: t 7.30 s.*finding speed .*finding surface .*raven reports: 0"
+        ENVIRONMENT "RAVEN_LIVE_RELOAD=0;FULMETRY_CONFIG_DIR=${CMAKE_CURRENT_BINARY_DIR}/test-config")
+    endif()
   endif()
 endif()

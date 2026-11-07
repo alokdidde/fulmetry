@@ -42,6 +42,8 @@ public:
     void setJointsVisible(bool on) override;
     void setStyle(StageStyle style) override;
     void setSlicePlane(const std::optional<double>& heightMm) override;
+    void setEnvironment(const std::optional<StageEnvironment>& environment) override;
+    void setPartPose(const PartId& part, const std::optional<Transform>& pose) override;
 
     Transform drawnPlacement(const PartId& part) const override;
 

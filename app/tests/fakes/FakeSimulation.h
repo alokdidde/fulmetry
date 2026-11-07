@@ -17,13 +17,15 @@ public:
         std::smatch m;
         static const std::regex wheel(R"re(name="wheel_l"[^>]*size="([0-9.]+))re");
         wheelRadiusM_ = std::regex_search(xml, m, wheel) ? std::stod(m[1]) : 0.03;
+        static const std::regex track(R"re(name="wheel_l_body"[^>]*pos="[-0-9.]+ ([0-9.]+))re");
+        halfTrackM_ = std::regex_search(xml, m, track) ? std::stod(m[1]) : 0.068;
         loaded_ = true;
         reset(0);
         return Ok{};
     }
     void reset(uint64_t seed) override {
         seed_ = seed;
-        t_ = x_ = y_ = heading_ = speed_ = 0;
+        t_ = x_ = y_ = heading_ = speed_ = spin_ = 0;
         hash_ = 1469598103934665603ull ^ seed;
         input_ = {};
     }
@@ -37,6 +39,7 @@ public:
             double target = input_.throttle * maxSpeed;
             speed_ += (target - speed_) * std::min(1.0, sub * 8.0);
             heading_ += input_.steer * 2.0 * sub;
+            spin_ += speed_ / wheelRadiusM_ * sub;
             x_ += std::cos(heading_) * speed_ * sub;
             y_ += std::sin(heading_) * speed_ * sub;
             t_ += sub;
@@ -44,11 +47,21 @@ public:
         }
     }
     double time() const override { return t_; }
+    // "rover", and its wheels "wheel_l_body" / "wheel_r_body" (on the axle, turning as they roll).
     Result<Transform> bodyPose(const std::string& body) const override {
-        if (body != "rover") return Error{"not_found", body};
+        const bool l = body == "wheel_l_body", r = body == "wheel_r_body";
+        if (body != "rover" && !l && !r) return Error{"not_found", body};
         Transform tr;
         tr.position = {x_ * 1000, y_ * 1000, wheelRadiusM_ * 1000};
         tr.rotation = {std::cos(heading_ / 2), 0, 0, std::sin(heading_ / 2)};
+        if (l || r) {
+            const double side = (l ? 1 : -1) * halfTrackM_ * 1000;
+            tr.position = {tr.position.x - std::sin(heading_) * side, tr.position.y + std::cos(heading_) * side, tr.position.z};
+            // heading about z, then the roll about the axle (y)
+            const Quat h = tr.rotation, roll{std::cos(spin_ / 2), 0, std::sin(spin_ / 2), 0};
+            tr.rotation = {h.w * roll.w - h.z * roll.z, h.w * roll.x - h.z * roll.y, h.w * roll.y + h.z * roll.x,
+                           h.w * roll.z + h.z * roll.w};
+        }
         return tr;
     }
     std::map<std::string, double> telemetry() const override {
@@ -72,7 +85,7 @@ private:
 
     bool loaded_ = false;
     uint64_t seed_ = 0, hash_ = 0;
-    double t_ = 0, x_ = 0, y_ = 0, heading_ = 0, speed_ = 0, wheelRadiusM_ = 0.03;
+    double t_ = 0, x_ = 0, y_ = 0, heading_ = 0, speed_ = 0, spin_ = 0, wheelRadiusM_ = 0.03, halfTrackM_ = 0.068;
     DriveInput input_;
 };
 

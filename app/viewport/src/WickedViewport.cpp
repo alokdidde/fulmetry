@@ -136,6 +136,9 @@ struct WickedViewport::Impl {
     bool xray = false, joints = false;
     StageStyle style = StageStyle::HighKey;
     std::optional<double> slice;
+    std::map<PartId, Transform> poses;           // Simulate: where the physics has each part
+    std::optional<StageEnvironment> environment;  // Simulate: the room
+    bool environmentDirty = false;
     CameraState cam;
     int width = 1280, height = 800;
     double lastMs = 0;
@@ -153,6 +156,7 @@ struct WickedViewport::Impl {
     wi::scene::CameraComponent wcam;
     std::map<PartId, PartEntity> entities;
     wi::ecs::Entity ground = wi::ecs::INVALID_ENTITY, keyLight = wi::ecs::INVALID_ENTITY;
+    std::vector<wi::ecs::Entity> props;
     wi::graphics::Texture target, accum, mask[2], maskMSAA;
 
     ObjectId objectOf(const PartId& part) const {
@@ -183,6 +187,7 @@ struct WickedViewport::Impl {
     Transform placement(const PartId& part) const {
         const Part* p = project.findPart(part);
         if (!p) return {};
+        if (auto it = poses.find(part); it != poses.end()) return it->second;
         Transform t = p->placement;
         t.position = objectOffset(objectOf(part)) + t.position;
         if (explode > 0) {
@@ -389,8 +394,50 @@ struct WickedViewport::Impl {
         }
     }
 
+    // The room's boxes, rebuilt when the environment changes. They take shadows and outlines like parts.
+    void syncProps() {
+        auto& s = *scene;
+        for (auto e : props) s.Entity_Remove(e);
+        props.clear();
+        environmentDirty = false;
+        if (!environment) return;
+        int n = 0;
+        for (const StageProp& prop : environment->props) {
+            const MeshAsset box = boxMesh(prop.box);
+            const std::string name = "prop#" + std::to_string(n++);
+            wi::ecs::Entity obj = s.Entity_CreateObject(name);
+            wi::ecs::Entity me = s.Entity_CreateMesh(name + "#mesh");
+            wi::ecs::Entity mat = s.Entity_CreateMaterial(name + "#mat");
+            auto& o = *s.objects.GetComponent(obj);
+            o.meshID = me;
+            o.SetCastShadow(true);
+            auto& m = *s.meshes.GetComponent(me);
+            for (size_t i = 0; i < box.positions.size(); ++i) {
+                const auto& v = box.positions[i];
+                const auto& nn = box.normals[i];
+                m.vertex_positions.push_back(XMFLOAT3(v[0] * kUnitsPerMm, v[2] * kUnitsPerMm, v[1] * kUnitsPerMm));
+                m.vertex_normals.push_back(XMFLOAT3(nn[0], nn[2], nn[1]));
+            }
+            m.indices.assign(box.indices.begin(), box.indices.end());
+            auto& sub = m.subsets.emplace_back();
+            sub.materialID = mat;
+            sub.indexOffset = 0;
+            sub.indexCount = uint32_t(box.indices.size());
+            m.CreateRenderData();
+            if (auto* mm = s.materials.GetComponent(mat)) {
+                const auto c = parseHex(prop.color, kDefaultPartColor);
+                mm->SetBaseColor(XMFLOAT4(srgbToLinear(c[0]), srgbToLinear(c[1]), srgbToLinear(c[2]), 1));
+                mm->SetRoughness(1.0f);
+                mm->SetMetalness(0.0f);
+                mm->SetOutlineEnabled(false);
+            }
+            props.push_back(obj);
+        }
+    }
+
     void syncScene() {
         auto& s = *scene;
+        if (environmentDirty) syncProps();
         for (const Part* p : project.allParts()) {
             auto ent = entities.find(p->id);
             if (ent == entities.end()) continue;
@@ -426,7 +473,12 @@ struct WickedViewport::Impl {
         }
         // The ground sits under the lowest visible part, wide enough to fill every view.
         double floorZ = 0;
-        if (auto b = visibleBounds()) floorZ = b->min.z;
+        if (environment) floorZ = 0;  // the room's floor
+        else if (auto b = visibleBounds()) floorZ = b->min.z;
+        if (auto* m = s.materials.GetComponent(ground)) {
+            const auto c = environment ? parseHex(environment->floorColor, {1, 1, 1}) : std::array<float, 3>{1, 1, 1};
+            m->SetBaseColor(XMFLOAT4(srgbToLinear(c[0]), srgbToLinear(c[1]), srgbToLinear(c[2]), 1));
+        }
         // Two shadow cascades: a sharp one that just holds the stage, and a coarse one for the rest of the ground.
         if (auto* l = s.lights.GetComponent(keyLight))
             l->cascade_distances = {float((cam.eye - cam.target).length()) * kUnitsPerMm * 1.6f, kFarPlane};
@@ -659,6 +711,14 @@ void WickedViewport::setXray(bool on) { impl_->xray = on; }
 void WickedViewport::setJointsVisible(bool on) { impl_->joints = on; }
 void WickedViewport::setStyle(StageStyle style) { impl_->style = style; }
 void WickedViewport::setSlicePlane(const std::optional<double>& h) { impl_->slice = h; }
+void WickedViewport::setEnvironment(const std::optional<StageEnvironment>& env) {
+    impl_->environment = env;
+    impl_->environmentDirty = true;
+}
+void WickedViewport::setPartPose(const PartId& part, const std::optional<Transform>& pose) {
+    if (pose) impl_->poses[part] = *pose;
+    else impl_->poses.erase(part);
+}
 Transform WickedViewport::drawnPlacement(const PartId& part) const { return impl_->placement(part); }
 CameraState WickedViewport::camera() const { return impl_->cam; }
 void WickedViewport::setCamera(const CameraState& c) { impl_->cam = c; }

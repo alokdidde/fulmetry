@@ -247,7 +247,27 @@ int LiveStage::onEvent(Rid, const REvent* e, void* user) {
 
 // ------------------------------------------------------------------ frame
 
+void LiveStage::setSimulating(bool on) {
+    simulating_ = on;
+    if (!on) {
+        // the simulation showed one object, assembled and solid: put the model's view back
+        shownTab_ = -1;
+        shownExplode_ = shownXray_ = false;
+        shownSel_.reset();
+        needFit_ = true;
+    }
+    changed();
+}
+
 void LiveStage::syncModel() {
+    if (simulating_) {
+        if (model_.selectedPart() != shownSel_) {
+            shownSel_ = model_.selectedPart();
+            vp_.setSelected(shownSel_);
+            changed();
+        }
+        return;
+    }
     if (model_.activeTab() != shownTab_) {
         shownTab_ = model_.activeTab();
         vp_.showObject(model_.scope());
@@ -289,7 +309,7 @@ void LiveStage::update(double now) {
         clickAt_.reset();
     }
     syncModel();
-    if (needFit_) {
+    if (needFit_ && !simulating_) {
         needFit_ = false;
         fit();
     }

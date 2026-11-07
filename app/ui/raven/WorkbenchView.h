@@ -72,6 +72,20 @@ public:
     // Runs a harness command as its button would: install:<id>, signin:<id>, answer:<id>, cancel:<id>,
     // signout:<id>, off:<id>, on:<id>, add:<registry id>, remove:<id>, choose:<id>[/<model>]. For the shots.
     bool harnessCommand(const std::string& command);
+    // Simulate mode (SimulateMode): the Simulate button, the menu's Simulate and Esc call `handler`;
+    // setSimulating swaps the part card for the drive-test card (the "drive" panel) and Simulate for Stop.
+    void setSimulateHandler(std::function<void()> handler) { simulateHandler_ = std::move(handler); }
+    void setSimulating(bool on);
+    bool simulating() const { return simulating_; }
+    // Starts an agent on `part` with `text`, as asking in the chat with that part selected does.
+    void askAbout(const PartId& part, const std::string& text);
+    Rid widget(const char* name) const { return find(name); }
+    WorkbenchModel& model() { return model_; }
+    const kit::Fonts& fonts() const { return fonts_; }
+    const std::string& assets() const { return opt_.assets; }
+    Rid eyebrow(Rid parent, const std::string& text, float size = 12);
+    Rid button(Rid parent, const std::string& text, bool primary, std::function<void()> onClick,
+               const std::string& iconName = {});
     // Queues work for update(): widget callbacks must not destroy the widgets they run on.
     void post(std::function<void()> fn) { queue_.push_back(std::move(fn)); }
 
@@ -97,8 +111,6 @@ private:
     void onboardRegistry(Rid body);
     Rid monogram(Rid parent, const Harness& h, float size);
     Rid statusPill(Rid parent, const Harness& h);
-    Rid button(Rid parent, const std::string& text, bool primary, std::function<void()> onClick,
-               const std::string& iconName = {});
     bool runHarness(const std::string& verb, const std::string& id);
     void report(const char* what, const std::string& id, const Status& st);
 
@@ -106,7 +118,6 @@ private:
     Rid pill(Rid parent, Verdict v);
     Rid chip(Rid parent, const Chip& c);
     Rid closeButton(Rid parent, std::function<void()> onClick);
-    Rid eyebrow(Rid parent, const std::string& text, float size = 12);
     void chatEntry(Rid list, const ChatEntry& e);
     void agentCard(Rid parent, const AgentCardView& card);
     std::string now() const;
@@ -130,6 +141,9 @@ private:
     PinLocator pinLocator_;
     std::function<std::optional<Rect>()> pinAvoid_;
     std::function<void(const std::string&)> actionHandler_;
+    std::function<void()> simulateHandler_;
+    bool simulating_ = false;
+    void setSimulateButton(bool stop);
     // harnesses
     bool onboardOpen_ = false, pickerOpen_ = false, onboardAuto_ = true;
     std::string onboardSel_;        // harness id, or "registry"

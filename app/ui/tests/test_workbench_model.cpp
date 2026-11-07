@@ -187,3 +187,56 @@ TEST_CASE("workbench model: the harness choice follows what is ready") {
     m.setHarnesses(fakes::FakeAgentClient(m.project(), false, fakes::FakeAgentClient::Harnesses::All).harnesses());
     CHECK(m.choice() == HarnessChoice{"codex", "gpt-6-luna"});
 }
+
+#include "fakes/FakeSimulation.h"
+#include "fakes/FakeViewport.h"
+#include "fulmetry/ui/DriveTest.h"
+
+TEST_CASE("drive test: the scripted drive moves the rover's parts on the stage and records what happened") {
+    const Project p = rover();
+    auto setup = parseSimSetup(slurp(FULMETRY_SOURCE_DIR "/fixtures/rover/sim/living-room.json"), p);
+    REQUIRE(setup.ok());
+    CHECK(setup->environment.props.size() > 5);
+    CHECK(setup->surfaceNames.front() == "Rug, 8 mm pile");
+    fakes::FakeSimulation sim;
+    fakes::FakeViewport vp;
+    REQUIRE(vp.loadProject(p).ok());
+    DriveTest drive(sim, &vp, p, setup.value());
+    REQUIRE(drive.start(slurp(FULMETRY_SOURCE_DIR "/fixtures/rover/sim/living-room.mjcf")).ok());
+    REQUIRE(vp.environment().has_value());
+    CHECK(drive.wheelDiameterMm() == doctest::Approx(60));
+    const PartId chassis("part:rover/chassis-tub"), wheel("part:rover/wheel-l");
+    const Transform chassis0 = vp.drawnPlacement(chassis);
+    CHECK(chassis0.position.z == doctest::Approx(30));  // at the start the parts are where the manifest has them
+
+    drive.runRoute();
+    bool sawRug = false;
+    for (int i = 0; i < 600 && !drive.routeDone(); ++i) {
+        drive.step(1.0 / 60);
+        sawRug |= drive.onSurface();
+    }
+    CHECK(drive.routeDone());
+    CHECK(sawRug);
+    CHECK(drive.distanceM() > 1.2);  // the fake slows 60 mm wheels to 0.2 m/s on the rug
+    const Transform chassis1 = vp.drawnPlacement(chassis), wheel1 = vp.drawnPlacement(wheel);
+    CHECK(chassis1.position.x > chassis0.position.x + 800);
+    // the wheel stays on its axle, 68 mm to the side of the chassis
+    const Vec3 d = wheel1.position - chassis1.position;
+    CHECK(std::sqrt(d.x * d.x + d.y * d.y) == doctest::Approx(68).epsilon(0.02));
+    REQUIRE(!drive.findings().empty());
+    const Finding* surface = nullptr;
+    bool speed = false;
+    for (const auto& f : drive.findings()) {
+        if (f.id == "surface") surface = &f;
+        speed |= f.id == "speed";
+    }
+    REQUIRE(surface);  // the rug was measured, even though the run ended on it
+    CHECK_FALSE(surface->good);
+    CHECK(surface->part == std::optional<PartId>(PartId("part:rover/wheel-l")));
+    CHECK(speed);
+
+    drive.stop();
+    CHECK_FALSE(vp.environment().has_value());
+    CHECK(vp.drawnPlacement(chassis) == chassis0);
+    CHECK_FALSE(parseSimSetup("{\"model\":\"x\",\"object\":\"obj:nope\",\"bodies\":{}}", p).ok());
+}

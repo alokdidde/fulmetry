@@ -3,6 +3,7 @@
 #pragma once
 #include <cstdint>
 #include <optional>
+#include <string>
 #include <vector>
 
 #include "fulmetry/core/Model.h"
@@ -23,6 +24,18 @@ struct Image {
 };
 
 enum class StageStyle { HighKey, Realistic };
+
+// Simulate's room around the project: a floor colour and boxes standing on it (rug, wall, sofa). World frame,
+// mm, Z up, the floor at z = 0.
+struct StageProp {
+    std::string name;   // "Rug, 8 mm pile"
+    Aabb box;
+    std::string color;  // "#rrggbb"
+};
+struct StageEnvironment {
+    std::string floorColor = "#ffffff";
+    std::vector<StageProp> props;
+};
 
 class IViewport {
 public:
@@ -45,6 +58,10 @@ public:
     virtual void setJointsVisible(bool on) = 0;
     virtual void setStyle(StageStyle style) = 0;
     virtual void setSlicePlane(const std::optional<double>& heightMm) = 0;
+    // Simulate: the room (nullopt: the workbench's white ground), and where the physics has a part now (world,
+    // mm). A pose overrides the part's placement, object offset and explode; nullopt puts it back.
+    virtual void setEnvironment(const std::optional<StageEnvironment>& environment) = 0;
+    virtual void setPartPose(const PartId& part, const std::optional<Transform>& pose) = 0;
 
     // Part placement as drawn (after explode); used by tests and by pins.
     virtual Transform drawnPlacement(const PartId& part) const = 0;
