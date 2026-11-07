@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fulmetry.dev/schemas/worker-method.schema.json",
+  "title": "Fulmetry worker method contract",
+  "description": "The shape of each contracts/worker/<method>.json. The worker validates params and results with them; maker-tools turns each into an MCP tool.",
+  "type": "object",
+  "required": ["$schema", "method", "since", "params", "result"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "const": "https://json-schema.org/draft/2020-12/schema" },
+    "method": { "type": "string", "pattern": "^[a-z]+\\.[A-Za-z]+$", "description": "toolkit.name; the file is named <method>.json" },
+    "description": { "type": "string", "minLength": 1, "description": "What the method does, for people and agents (becomes the MCP tool description)" },
+    "since": { "enum": ["M0", "M1", "M2", "M3", "M4", "M5", "M6"] },
+    "timeoutMs": { "type": "integer", "minimum": 1000, "description": "How long a caller should wait for one call before giving up on the worker" },
+    "readOnly": { "type": "boolean", "description": "True when the method writes no files; such a call may be retried after a worker crash (MCP readOnlyHint)" },
+    "params": { "type": "object", "required": ["type"], "properties": { "type": { "const": "object" } } },
+    "result": { "type": "object", "required": ["type"], "properties": { "type": { "const": "object" } } }
+  }
+}
