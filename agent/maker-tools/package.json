@@ -1,0 +1,29 @@
+{
+  "name": "@fulmetry/maker-tools",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Fulmetry MCP toolkits: one tool per engine worker contract method, forwarded to the worker over stdio JSON-RPC",
+  "type": "module",
+  "bin": {
+    "fulmetry-maker-tools": "dist/cli.js"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.test.json",
+    "test": "tsc -p tsconfig.test.json && vitest run",
+    "start": "node dist/cli.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.2"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "typescript": "5.9.3",
+    "vitest": "5.1.0"
+  }
+}
