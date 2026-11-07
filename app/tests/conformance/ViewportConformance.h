@@ -18,10 +18,19 @@ inline void viewportConformance(const std::function<std::unique_ptr<IViewport>()
         for (const Part* p : project.allParts()) {
             v->isolate(p->id);
             v->flyTo(p->id);
-            Vec3 c = v->drawnPlacement(p->id).position + p->bounds.center();
-            auto px = v->project(c);
+            const Transform t = v->drawnPlacement(p->id);
+            auto px = v->project(t.position + p->bounds.center());
             REQUIRE_MESSAGE(px.has_value(), p->id.value);
             auto hit = v->pick(px->first, px->second);
+            // A real mesh need not cover the centre of its bounds (a ring of screws, a tub seen through its open
+            // top). Then some point inside the bounds must pick it: a 9 x 9 x 9 grid over the box, nearest first.
+            for (int i = 0; !hit && i < 9 * 9 * 9; ++i) {
+                const Aabb& b = p->bounds;
+                const Vec3 f{(i % 9 + 0.5) / 9, (i / 9 % 9 + 0.5) / 9, (i / 81 + 0.5) / 9};
+                const Vec3 local{b.min.x + (b.max.x - b.min.x) * f.x, b.min.y + (b.max.y - b.min.y) * f.y,
+                                 b.min.z + (b.max.z - b.min.z) * f.z};
+                if (auto q = v->project(t.position + local)) hit = v->pick(q->first, q->second);
+            }
             REQUIRE_MESSAGE(hit.has_value(), p->id.value);
             CHECK_MESSAGE(hit->part == p->id, p->id.value);
         }

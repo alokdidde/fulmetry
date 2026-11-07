@@ -22,6 +22,8 @@ PART_ID = re.compile(r"^part:([a-z0-9][a-z0-9-]*)/([a-z0-9][a-z0-9-]*)$")
 # Mesh tolerances in mm: fine enough to see the tread, small enough to load fast.
 LINEAR_DEFLECTION = 0.05
 ANGULAR_DEFLECTION = 0.2
+# Colour of children without a material label (see mesh.PALETTE).
+DEFAULT_COLOR = "#c9ccd1"
 
 
 def engines() -> dict[str, str]:
@@ -97,7 +99,9 @@ def build(project_root: str, part: str, overrides: dict | None = None) -> dict:
     except (OSError, ValueError, KeyError):
         pass
 
-    from build123d import export_gltf, export_step
+    from build123d import export_step
+
+    from .mesh import material_from_color, write_glb
 
     try:
         shape = module.build(dict(params))
@@ -112,8 +116,9 @@ def build(project_root: str, part: str, overrides: dict | None = None) -> dict:
     out.mkdir(parents=True, exist_ok=True)
     meta.unlink(missing_ok=True)  # never leave a hash that points at half-written files
     _write_atomic(step, lambda p: export_step(shape, p))
-    _write_atomic(glb, lambda p: export_gltf(shape, p, binary=True, linear_deflection=LINEAR_DEFLECTION,
-                                             angular_deflection=ANGULAR_DEFLECTION))
+    default = material_from_color(slug, DEFAULT_COLOR)
+    _write_atomic(glb, lambda p: write_glb(shape, p, default, linear=LINEAR_DEFLECTION, angular=ANGULAR_DEFLECTION,
+                                           name=slug) is not None)
     meta.write_text(json.dumps({"part": part, "sourceHash": digest, "params": params, "bounds": bounds},
                                indent=2), encoding="utf-8")
     return {**result, "bounds": bounds}

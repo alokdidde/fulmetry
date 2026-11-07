@@ -102,7 +102,7 @@ def test_changing_a_param_changes_the_hash_and_rebuilds(project):
     assert wider["bounds"]["max"][1] - wider["bounds"]["min"][1] == pytest.approx(20.0, abs=0.01)
     # Editing PARAMS in the source changes the hash on the RPC path too.
     src = project / "cad" / "rover" / "wheel-l.py"
-    src.write_text(src.read_text(encoding="utf-8").replace('"grooves": 24', '"grooves": 18'), encoding="utf-8")
+    src.write_text(src.read_text(encoding="utf-8").replace('"grooves": 20', '"grooves": 16'), encoding="utf-8")
     edited = call({"projectRoot": str(project), "part": WHEEL})["result"]
     assert edited["sourceHash"] not in {base["sourceHash"], wider["sourceHash"]}
 
