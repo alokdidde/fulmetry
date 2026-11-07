@@ -10,8 +10,9 @@ with a still picture of the rover in place of the live stage.
 
 1. Download `Fulmetry-<version>-macos-arm64.zip` and unzip it.
 2. Move `Fulmetry.app` to Applications.
-3. The app is not notarized yet, so the first time, right-click it and choose **Open**, then **Open** again. If
-   macOS says it is damaged, run `xattr -dr com.apple.quarantine /Applications/Fulmetry.app` in Terminal.
+3. The app is not notarized yet, so macOS says it "could not verify Fulmetry is free of malware". Either run
+   `xattr -dr com.apple.quarantine /Applications/Fulmetry.app` in Terminal and open the app, or click **Done**, go
+   to **System Settings > Privacy & Security**, click **Open Anyway** next to the Fulmetry line, and confirm.
 
 The first launch compiles the stage's shaders, which takes a little while; later launches reuse them.
 
