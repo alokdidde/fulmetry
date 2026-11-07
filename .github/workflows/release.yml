@@ -74,11 +74,11 @@ jobs:
         run: system_profiler SPDisplaysDataType | head -20
       - name: Metal shaders compile
         # The live stage compiles Wicked's shaders for Metal on first launch. The runner's GPU can't run them, but the
-        # compiler (DXC, then the Metal shader converter) runs on the CPU, so compile all of them here: one that
-        # fails crashes the stage on a Metal 4 Mac.
+        # compiler (DXC, then the Metal shader converter) runs on the CPU, so compile all of them here and ship them
+        # in the app (tools/package/macos.sh): the app then never compiles shaders on the user's Mac.
         run: |
           w="$WICKED_ROOT/WickedEngine"
-          out="$RUNNER_TEMP/shadercheck"
+          out="$GITHUB_WORKSPACE/build/release/metal-shaders"
           mkdir -p "$out"
           cp "$w/libdxcompiler.dylib" "$w/libmetalirconverter.dylib" "$out/"
           clang++ -std=gnu++20 -O1 -w -DJPH_DEBUG_RENDERER -I"$w" -I"$w/Utility/metal" "$w/offlineshadercompiler.cpp" \
