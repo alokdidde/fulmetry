@@ -32,7 +32,7 @@ shrink() {  # lossless when it fits, else 256 colours; always under 400 KB
 
 shot() {  # shot <name> [workbench args...]
   local name=$1; shift
-  "$BIN" --frames 30 --strict --shot "$OUT/$name.png" "$@" >"$LOGS/$name.log" 2>&1 || { cat "$LOGS/$name.log"; exit 1; }
+  "$BIN" --project sample --frames 30 --strict --shot "$OUT/$name.png" "$@" >"$LOGS/$name.log" 2>&1 || { cat "$LOGS/$name.log"; exit 1; }
   grep -q "^stage: Wicked" "$LOGS/$name.log" || { echo "FAIL: $name: no live stage"; cat "$LOGS/$name.log"; exit 1; }
   shrink "$OUT/$name.png"
   echo "$name.png: $(stat -c %s "$OUT/$name.png") bytes; $(grep '^stage frame times' "$LOGS/$name.log")"
@@ -46,7 +46,7 @@ shot actions-menu --open menu
 
 # ---- interaction: X11 drag, wheel and click on the stage (positions come from the app's own report)
 LOG="$LOGS/interaction.log"
-"$BIN" --run-seconds 240 >"$LOG" 2>&1 &
+"$BIN" --project sample --run-seconds 240 >"$LOG" 2>&1 &
 APP=$!
 settled() { grep -c "^stage-settled" "$LOG" || true; }
 wait_settled() {  # wait_settled <count>

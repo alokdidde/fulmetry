@@ -97,7 +97,7 @@ jobs:
         # The UI runs on Raven's null backend. Wicked's Metal backend needs Metal 4, which the hosted runners' virtual
         # GPU lacks, so here the app takes its still-stage fallback; on a Metal 4 Mac the live stage and Simulate run.
         run: |
-          build/release/app/ui/fulmetry_workbench --headless --strict --frames 30 --simulate --sim-seconds 3 | tee smoke.log
+          build/release/app/ui/fulmetry_workbench --headless --strict --project sample --frames 30 --simulate --sim-seconds 3 | tee smoke.log
           grep -q "workbench ready" smoke.log
           grep -Eq "stage: (Wicked|still image)" smoke.log
           if grep -q "stage: Wicked" smoke.log; then grep -q "simulate: t 3.00 s" smoke.log; fi
@@ -108,8 +108,8 @@ jobs:
         continue-on-error: true
         run: |
           mkdir -p shots
-          dist/Fulmetry.app/Contents/MacOS/Fulmetry --frames 40 --strict --shot "$PWD/shots/macos-app.png"
-          dist/Fulmetry.app/Contents/MacOS/Fulmetry --frames 40 --strict --simulate --sim-seconds 7.3 \
+          dist/Fulmetry.app/Contents/MacOS/Fulmetry --project sample --frames 40 --strict --shot "$PWD/shots/macos-app.png"
+          dist/Fulmetry.app/Contents/MacOS/Fulmetry --project sample --frames 40 --strict --simulate --sim-seconds 7.3 \
             --shot "$PWD/shots/macos-simulate.png"
       - uses: actions/upload-artifact@v4
         with:
@@ -171,7 +171,7 @@ jobs:
       - name: Smoke run of the package
         run: |
           tar -C "$RUNNER_TEMP" -xzf dist/*.tar.gz
-          "$RUNNER_TEMP"/fulmetry-*/fulmetry --headless --strict --frames 30 --simulate --sim-seconds 3 | tee smoke.log
+          "$RUNNER_TEMP"/fulmetry-*/fulmetry --headless --strict --project sample --frames 30 --simulate --sim-seconds 3 | tee smoke.log
           grep -q "stage: Wicked" smoke.log
           grep -q "simulate: t 3.00 s" smoke.log
       - uses: actions/upload-artifact@v4

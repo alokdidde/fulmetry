@@ -1,7 +1,8 @@
-An early build of the Fulmetry workbench: the desk rover project on the live 3D stage, its parts and checks, explode
-and x-ray, the harness onboarding, and Simulate (the living-room drive test on MuJoCo).
+An early build of the Fulmetry workbench: the home screen (start a project from an idea), the coding-agent sign-in,
+and the desk rover sample on the live 3D stage with its parts and checks, explode and x-ray, and Simulate (the
+living-room drive test on MuJoCo).
 
-The project chat runs on a stand-in agent for now: it answers, but it does not change the project yet.
+The project chat and the sign-in run on a stand-in agent for now: it answers, but it does not change the project yet.
 
 ## macOS (Apple silicon)
 
@@ -14,7 +15,8 @@ with a still picture of the rover in place of the live stage.
    `xattr -dr com.apple.quarantine /Applications/Fulmetry.app` in Terminal and open the app, or click **Done**, go
    to **System Settings > Privacy & Security**, click **Open Anyway** next to the Fulmetry line, and confirm.
 
-The first launch compiles the stage's shaders, which takes a little while; later launches reuse them.
+The first launch opens the sign-in wizard for your coding agents, then the home screen, where you start a project from an
+idea or open the desk rover sample.
 
 ## Linux (x86_64)
 

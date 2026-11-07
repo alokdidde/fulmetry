@@ -34,7 +34,7 @@ shrink() {
 shot() {  # shot <name> [workbench args...]
   local name=$1; shift
   rm -rf "$FULMETRY_CONFIG_DIR"
-  "$BIN" --frames 40 --strict --shot "$OUT/$name.png" "$@" >"$LOGS/$name.log" 2>&1 || { cat "$LOGS/$name.log"; exit 1; }
+  "$BIN" --project sample --frames 40 --strict --shot "$OUT/$name.png" "$@" >"$LOGS/$name.log" 2>&1 || { cat "$LOGS/$name.log"; exit 1; }
   shrink "$OUT/$name.png"
   echo "$name.png: $(stat -c %s "$OUT/$name.png") bytes; $(grep '^new agents run on' "$LOGS/$name.log")"
 }
@@ -52,7 +52,7 @@ grep -q "^new agents run on: codex/gpt-6-luna" "$LOGS/picker.log" || { echo "FAI
 # ---- a real click on the harness chip opens the picker
 LOG="$LOGS/click.log"
 rm -rf "$FULMETRY_CONFIG_DIR"
-"$BIN" --still --run-seconds 30 >"$LOG" 2>&1 &
+"$BIN" --project sample --still --run-seconds 30 >"$LOG" 2>&1 &
 APP=$!
 for _ in $(seq 1 100); do grep -q "^harness-chip-at" "$LOG" && break; sleep 0.2; done
 read -r _ CX CY < <(grep "^harness-chip-at" "$LOG" | tail -1)

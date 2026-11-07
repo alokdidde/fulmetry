@@ -29,7 +29,7 @@ shrink() {
 }
 shot() {  # shot <name> [workbench args...]
   local name=$1; shift
-  "$BIN" --frames 40 --strict --shot "$OUT/$name.png" --simulate "$@" >"$LOGS/$name.log" 2>&1 || { cat "$LOGS/$name.log"; exit 1; }
+  "$BIN" --project sample --frames 40 --strict --shot "$OUT/$name.png" --simulate "$@" >"$LOGS/$name.log" 2>&1 || { cat "$LOGS/$name.log"; exit 1; }
   shrink "$OUT/$name.png"
   echo "$name.png: $(stat -c %s "$OUT/$name.png") bytes"
   grep -E '^simulate: (MuJoCo|kinematic|t )|^finding' "$LOGS/$name.log"
@@ -44,7 +44,7 @@ grep -q '^finding stall1 (bad): Stalled at full throttle against the brick wall'
   { echo "the stall at the wall was not measured"; exit 1; }
 
 # Keys in a real window: hold W, then Esc stops the simulation.
-"$BIN" --simulate --run-seconds 40 >"$LOGS/keys.log" 2>&1 &
+"$BIN" --project sample --simulate --run-seconds 40 >"$LOGS/keys.log" 2>&1 &
 APP=$!
 for _ in $(seq 1 60); do grep -q '^workbench ready' "$LOGS/keys.log" && break; sleep 0.5; done
 sleep 4

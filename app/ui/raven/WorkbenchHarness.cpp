@@ -310,7 +310,7 @@ void WorkbenchView::buildOnboard() {
     const bool ready = !model_.needsOnboarding();
     Rwidget_set_visibility(find("onboard.close"), ready ? R_VISIBLE : R_HIDDEN);
     setBackground(find("onboard.done"), ready ? kAccent : 0xC9CED4);
-    setText(find("onboard.done.label"), !ready ? "Connect a harness to continue" : onboardAuto_ ? "Open the workbench" : "Done");
+    setText(find("onboard.done.label"), !ready ? "Connect a harness to continue" : onboardAuto_ ? (homeOpen_ ? "Continue" : "Open the workbench") : "Done");
     setBackground(find("onboard.scrim"), 0xE9EDF1, 1);
 
     Rid list = find("onboard.list");

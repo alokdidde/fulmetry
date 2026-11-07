@@ -29,6 +29,8 @@ public:
     WickedViewport& operator=(const WickedViewport&) = delete;
 
     Status loadProject(const Project& project) override;
+    // Where relative Part.meshFile paths start, for the next loadProject (another project's folder).
+    void setAssetRoot(const std::string& root);
     void showObject(const std::optional<ObjectId>& object) override;
 
     void setSelected(const std::optional<PartId>& part) override;

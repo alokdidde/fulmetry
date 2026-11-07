@@ -116,6 +116,7 @@ void WorkbenchView::bindStatic() {
         this);
 
     bindHarness();
+    bindHome();
     onClick(find("send"), [this] { post([this] { send(); }); },
             {kAccent, 0xD12A25, 1, 1, true});
     onClick(find("simulate"), [this] {
@@ -135,6 +136,7 @@ void WorkbenchView::bindStatic() {
             auto* v = static_cast<WorkbenchView*>(user);
             v->post([v] {
                 if (v->pickerOpen_) v->setPickerOpen(false);
+                else if (v->homeOpen_ && !v->onboardOpen_) v->setHomeOpen(false);
                 else if (v->simulating_ && v->simulateHandler_) v->simulateHandler_();
                 else if (v->onboardOpen_) {
                     if (!v->model_.needsOnboarding()) v->setOnboardOpen(false);
@@ -304,6 +306,7 @@ void WorkbenchView::sync() {
         // The first run opens the onboarding screen by itself, until the person closes it.
         if (!onboardOpen_ && onboardAuto_ && model_.needsOnboarding() && !model_.harnesses().empty()) setOnboardOpen(true);
         else if (onboardOpen_) buildOnboard();
+        if (homeOpen_) buildHome();
         shownHarness_ = model_.harnessVersion();
     }
 }
