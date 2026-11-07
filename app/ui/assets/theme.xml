@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Fulmetry high-key theme (UI spec, "Visual style"): white panels, 1 px #E1E5EA lines, 3 px corners,
+  soft shadows, red accent #E5322D. Values come from the approved prototype's CSS (:root and the
+  high-key overrides). Watched while the workbench runs: save and the window follows.
+-->
+<Theme Name="FulmetryLight" Look="RavenLight" Motion="Smooth" Accent="#E5322D">
+	<Colors Window="#FFFFFF" Panel="#FFFFFF" Border="#E1E5EA" Separator="#E1E5EA"
+		Text="#14171A" TextPlaceholder="#8A939C" TextDisabled="#9AA3AC"
+		Accent="#E5322D" AccentHovered="#D12A25" AccentPressed="#B9231F" AccentText="#FFFFFF"
+		Control="#F3F5F7" ControlHovered="#ECEFF2" ControlPressed="#E3E7EB" ControlBorder="#E1E5EA"
+		Input="#F3F5F7" Focus="#E5322D" Selection="#F9D4D3" RowHovered="#F3F5F7"
+		Popup="#FFFFFF" PopupBorder="#E1E5EA" Shadow="#1018282E" Link="#1E6FE8"
+		Tooltip="#14171A" TooltipText="#FFFFFF" Handle="#C9CED4" HandleHovered="#AEB5BD" Track="#00000000"/>
+	<Metrics FontSize="13" CornerRadius="3" PopupRadius="3" BorderWidth="1" ControlHeight="30"
+		PaddingX="10" PaddingY="6" Spacing="8" ScrollbarSize="6"/>
+
+	<!-- the composer field sits inside its own rounded row: no box of its own -->
+	<Style Widget="TextInput" Class="composer" Background="None" BorderColor="#00000000" BorderWidth="0"/>
+	<Style Widget="TextInput" Class="composer" State="Focused" Background="None" BorderColor="#00000000" BorderWidth="0"/>
+	<Style Widget="TextInput" Class="composer" Part="Focus" BorderColor="#00000000" BorderWidth="0"/>
+</Theme>

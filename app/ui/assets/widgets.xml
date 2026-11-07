@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Fulmetry workbench: the pieces workbench.xml is built from. Values follow the approved prototype's CSS
+  (high-key overrides): .panel, .eyebrow, .btn, .pchip. Loaded automatically next to workbench.xml.
+  Labels with Class="eyebrow" get their letter spacing (.09em) from the C++ side (hair spaces), since
+  Raven has no letter spacing.
+-->
+<Widgets>
+	<!-- .panel: white, 1 px line, 3 px corners, soft shadow -->
+	<Widget Name="Panel" Pad="12">
+		<Border Background="#FFFFFF" BorderColor="#E1E5EA" BorderWidth="1" CornerRadius="3" Shadow="22,0,7" Padding="{Pad}">
+			<Children/>
+		</Border>
+	</Widget>
+
+	<!-- .eyebrow: Inter Tight semibold, upper case, tracked, muted -->
+	<Widget Name="Eyebrow" Size="12" Tone="#66707B">
+		<Label Class="eyebrow" Font="fonts/InterTight-SemiBold.ttf" TextSize="{Size}" Color="{Tone}"/>
+	</Widget>
+
+	<!-- one cell of the totals strip -->
+	<Widget Name="StatCell" Title="" ValueName="">
+		<VBox Spacing="1" Slot.Padding="12,6,12,6">
+			<Eyebrow>{Title}</Eyebrow>
+			<Label Name="{ValueName}" Font="fonts/IBMPlexMono-Regular.ttf" TextSize="13.5" Color="#14171A"/>
+		</VBox>
+	</Widget>
+	<Widget Name="Rule" Vertical="true">
+		<Border Width="{Vertical ? 1 : 0}" Height="{Vertical ? 0 : 1}" Background="#E1E5EA"/>
+	</Widget>
+
+	<!-- a status dot in the totals strip -->
+	<Widget Name="Dot" Tone="#14A86B">
+		<Border Width="7" Height="7" CornerRadius="3.5" Background="{Tone}" Slot.VAlign="Center"/>
+	</Widget>
+	<Widget Name="DotCount" Tone="#14A86B" ValueName="">
+		<HBox Spacing="4">
+			<Dot Tone="{Tone}"/>
+			<Label Name="{ValueName}" Font="fonts/IBMPlexMono-Regular.ttf" TextSize="13.5" Color="#14171A" Slot.VAlign="Center"/>
+		</HBox>
+	</Widget>
+
+	<!-- .btn: light grey, 1 px line, semibold 12 -->
+	<Widget Name="SmallButton" Text="">
+		<Border Background="#F3F5F7" BorderColor="#E1E5EA" BorderWidth="1" CornerRadius="3" Padding="9,5" Cursor="Hand">
+			<Label Font="fonts/Inter-SemiBold.ttf" TextSize="12" Color="#14171A">{Text}</Label>
+		</Border>
+	</Widget>
+</Widgets>
