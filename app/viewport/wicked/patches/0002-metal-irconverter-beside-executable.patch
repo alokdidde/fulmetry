@@ -1,0 +1,18 @@
+diff --git a/WickedEngine/wiShaderCompiler.cpp b/WickedEngine/wiShaderCompiler.cpp
+index a42ab5c..7fd06ce 100644
+--- a/WickedEngine/wiShaderCompiler.cpp
++++ b/WickedEngine/wiShaderCompiler.cpp
+@@ -609,7 +609,12 @@ namespace wi::shadercompiler
+ #ifdef SHADERCOMPILER_APPLE_INCLUDED
+ 			if (input.format == ShaderFormat::METAL)
+ 			{
+-				static HMODULE irconverter = wiLoadLibrary("libmetalirconverter.dylib");
++				// Next to the executable first (an app bundle ships it there), then the system's search path.
++				static HMODULE irconverter = []() {
++					const std::string local = wi::helper::GetDirectoryFromPath(wi::helper::GetExecutablePath()) + "libmetalirconverter.dylib";
++					HMODULE m = wiLoadLibrary(local.c_str());
++					return m != nullptr ? m : wiLoadLibrary("libmetalirconverter.dylib");
++				}();
+ 				assert(irconverter); // You must install the metal shader converter
+ 				if (irconverter != nullptr)
+ 				{

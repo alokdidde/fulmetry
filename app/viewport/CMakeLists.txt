@@ -38,10 +38,17 @@ target_compile_definitions(fulmetry_viewport PUBLIC FULMETRY_HAS_WICKED=1)
 
 # Wicked compiles shaders at runtime with libdxcompiler.so, loaded from the executable's directory.
 # fulmetry_wicked_runtime(<target>) works from any directory (app/ui's workbench uses it): WICKED_ROOT is a cache var.
+# On macOS the Metal path also needs libmetalirconverter.dylib (DXIL to Metal), from the same place.
 function(fulmetry_wicked_runtime target)
-  add_custom_command(TARGET ${target} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${WICKED_ROOT}/WickedEngine/libdxcompiler.so
-            $<TARGET_FILE_DIR:${target}>)
+  if(APPLE)
+    add_custom_command(TARGET ${target} POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different ${WICKED_ROOT}/WickedEngine/libdxcompiler.dylib
+              ${WICKED_ROOT}/WickedEngine/libmetalirconverter.dylib $<TARGET_FILE_DIR:${target}>)
+  else()
+    add_custom_command(TARGET ${target} POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different ${WICKED_ROOT}/WickedEngine/libdxcompiler.so
+              $<TARGET_FILE_DIR:${target}>)
+  endif()
 endfunction()
 
 add_executable(fulmetry_wicked_spike spike/render_rover.cpp)

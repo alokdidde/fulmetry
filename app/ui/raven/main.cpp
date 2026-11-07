@@ -32,6 +32,12 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#if defined(__APPLE__)
+#include <mach-o/dyld.h>
+#endif
+#if !defined(_WIN32)
+#include <unistd.h>
+#endif
 
 #include <nlohmann/json.hpp>
 
@@ -109,8 +115,56 @@ std::string slurp(const std::string& path) {
     return s.str();
 }
 
+std::filesystem::path executableDir() {
+    namespace fs = std::filesystem;
+    std::error_code ec;
+#if defined(__APPLE__)
+    char buf[4096];
+    uint32_t size = sizeof buf;
+    if (_NSGetExecutablePath(buf, &size) == 0) return fs::canonical(buf, ec).parent_path();
+#elif defined(__linux__)
+    return fs::canonical("/proc/self/exe", ec).parent_path();
+#endif
+    return {};
+}
+
+// A packaged app keeps what it reads beside the executable: Fulmetry.app/Contents/Resources on macOS,
+// <root>/share/fulmetry for the Linux tarball (tools/package). Empty in a build tree, which reads the sources.
+std::filesystem::path packagedResources() {
+    const auto exe = executableDir();
+    if (exe.empty()) return {};
+    for (const auto& r : {exe.parent_path() / "Resources", exe.parent_path() / "share" / "fulmetry"})
+        if (std::filesystem::exists(r / "assets" / "workbench.xml")) return r;
+    return {};
+}
+
+std::filesystem::path userCacheDir() {
+    namespace fs = std::filesystem;
+    const char* home = std::getenv("HOME");
+#if defined(__APPLE__)
+    return home ? fs::path(home) / "Library" / "Caches" / "Fulmetry" : fs::temp_directory_path() / "Fulmetry";
+#else
+    if (const char* x = std::getenv("XDG_CACHE_HOME"); x && *x) return fs::path(x) / "fulmetry";
+    return home ? fs::path(home) / ".cache" / "fulmetry" : fs::temp_directory_path() / "fulmetry";
+#endif
+}
+
+void setDefaultEnv(const char* name, const std::string& value) {
+#if !defined(_WIN32)
+    setenv(name, value.c_str(), 0);
+#endif
+}
+
 Options parse(int argc, char** argv) {
     Options o;
+    if (const auto res = packagedResources(); !res.empty()) {
+        o.assets = (res / "assets").string();
+        o.project = (res / "fixtures" / "rover" / "fulmetry.project.json").string();
+        o.simSetup = (res / "fixtures" / "rover" / "sim" / "living-room.json").string();
+        // Wicked compiles its shaders on first use from the shipped sources and keeps them between runs.
+        setDefaultEnv("FULMETRY_WICKED_SHADER_SOURCE", (res / "wicked-shaders").string());
+        setDefaultEnv("FULMETRY_WICKED_SHADER_CACHE", (userCacheDir() / "shaders").string());
+    }
     for (int i = 1; i < argc; ++i) {
         const std::string a = argv[i];
         auto next = [&]() -> std::string { return i + 1 < argc ? argv[++i] : ""; };
@@ -223,16 +277,21 @@ int main(int argc, char** argv) {
         viewport::WickedOptions wo;
         wo.assetRoot = std::filesystem::absolute(o.project).parent_path().string();  // meshFile paths
         auto wicked = std::make_unique<viewport::WickedViewport>(wo);
-        if (auto st = wicked->loadProject(project.value()); !st.ok()) {
-            std::fprintf(stderr, "stage: %s\n", st.error().message.c_str());
-            return 1;
+        // The engine starts on the first render: one small one tells whether this machine's GPU can run it.
+        Status st = wicked->loadProject(project.value());
+        if (st.ok())
+            if (auto probe = wicked->renderToImage(16, 16); !probe.ok()) st = probe.error();
+        if (!st.ok()) {
+            // No GPU the engine can use: the still stage, so the rest of the workbench still works.
+            std::printf("stage: still image, the live stage cannot start: %s\n", st.error().message.c_str());
+        } else {
+            for (const auto& w : wicked->meshWarnings()) std::fprintf(stderr, "stage: %s\n", w.c_str());
+            std::printf("stage: Wicked, %d parts drawn from meshes\n", wicked->meshFileCount());
+            lo.idleFrames = wo.frames;
+            lo.setFrames = [v = wicked.get()](int n) { v->setSoftShadowFrames(n); };
+            lo.setFraming = [v = wicked.get()](double l, double t, double r, double b) { v->setFramingRect(l, t, r, b); };
+            viewport = std::move(wicked);
         }
-        for (const auto& w : wicked->meshWarnings()) std::fprintf(stderr, "stage: %s\n", w.c_str());
-        std::printf("stage: Wicked, %d parts drawn from meshes\n", wicked->meshFileCount());
-        lo.idleFrames = wo.frames;
-        lo.setFrames = [v = wicked.get()](int n) { v->setSoftShadowFrames(n); };
-        lo.setFraming = [v = wicked.get()](double l, double t, double r, double b) { v->setFramingRect(l, t, r, b); };
-        viewport = std::move(wicked);
     }
 #endif
 
@@ -249,7 +308,19 @@ int main(int argc, char** argv) {
     desc.backend = o.headless ? R_BACKEND_NULL : R_BACKEND_VULKAN;
     desc.headless = o.headless ? R_TRUE : R_FALSE;
     desc.app_name = "fulmetry-workbench";
-    if (!Rinit_ex(&desc)) {
+#if defined(__APPLE__)
+    // Raven loads Vulkan by its bare name (libMoltenVK.dylib), which dlopen also looks for in the working
+    // directory: point that at the bundle's Frameworks while it loads, then put it back.
+    const auto frameworks = executableDir().parent_path() / "Frameworks";
+    const auto cwd = std::filesystem::current_path();
+    const bool bundled = std::filesystem::exists(frameworks / "libMoltenVK.dylib");
+    if (bundled) std::filesystem::current_path(frameworks);
+    const bool ravenUp = Rinit_ex(&desc);
+    if (bundled) std::filesystem::current_path(cwd);
+#else
+    const bool ravenUp = Rinit_ex(&desc);
+#endif
+    if (!ravenUp) {
         std::fprintf(stderr, "Rinit_ex failed\n");
         return 1;
     }

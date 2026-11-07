@@ -7,6 +7,13 @@
     "sha256": "1895a2f71e86d9a6026703ebdc1fae32af07792805ac56f9a73abceca30dbe1c",
     "cmake": "-DFULMETRY_WITH_MUJOCO=ON -DMUJOCO_ROOT=<dest>"
   },
+  "mujoco-macos": {
+    "owner": "s4",
+    "version": "3.3.7",
+    "url": "https://github.com/google-deepmind/mujoco/releases/download/3.3.7/mujoco-3.3.7-macos-universal2.dmg",
+    "sha256": "0076e4629f9ad482ef99d968a4ef2888bde9f30cf5726dd15027b614557ec7ba",
+    "cmake": "-DFULMETRY_WITH_MUJOCO=ON -DMUJOCO_ROOT=<dest> (macOS: <dest>/mujoco.framework, include/, lib/)"
+  },
   "wicked": {
     "owner": "s2",
     "repo": "https://github.com/turanszkij/WickedEngine.git",
