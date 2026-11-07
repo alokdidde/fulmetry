@@ -1,4 +1,4 @@
-// WickedViewport: IViewport on Wicked Engine (Vulkan).
+// WickedViewport: IViewport on Wicked Engine (Vulkan; Metal on macOS).
 //
 //  - Stage state (visibility, explode, camera, projection) is plain math, the same rules as FakeViewport.
 //  - Every part has a MeshAsset in its own frame: the glTF from Part.meshFile, or a box over Part.bounds. Picking
@@ -26,7 +26,11 @@
 #include <tuple>
 
 #include "WickedEngine.h"
+#if defined(__APPLE__)
+#include "wiGraphicsDevice_Metal.h"
+#else
 #include "wiGraphicsDevice_Vulkan.h"
+#endif
 
 namespace fulmetry::viewport {
 
@@ -98,10 +102,16 @@ private:
         std::string cache = std::filesystem::temp_directory_path().string() + "/fulmetry-wicked-shaders/";
         if (const char* env = std::getenv("FULMETRY_WICKED_SHADER_CACHE")) cache = std::string(env) + "/";
         wi::renderer::SetShaderPath(cache);
+        // A packaged app ships Wicked's HLSL sources with it; a build tree uses the checkout's.
+        if (const char* env = std::getenv("FULMETRY_WICKED_SHADER_SOURCE")) wi::renderer::SetShaderSourcePath(std::string(env) + "/");
         // Job threads also bound how many pipelines compile at once (memory-heavy on lavapipe).
         if (const char* env = std::getenv("FULMETRY_WICKED_THREADS")) wi::jobsystem::Initialize(uint32_t(std::atoi(env)));
         // nullptr window: no surface, no swapchain. Everything renders to our own textures.
+#if defined(__APPLE__)
+        device = std::make_unique<wi::graphics::GraphicsDevice_Metal>(wi::graphics::ValidationMode::Disabled);
+#else
         device = std::make_unique<wi::graphics::GraphicsDevice_Vulkan>(nullptr, wi::graphics::ValidationMode::Disabled);
+#endif
         wi::graphics::GetDevice() = device.get();
         wi::initializer::InitializeComponentsImmediate();
         wi::renderer::SetShadowProps2D(2048);

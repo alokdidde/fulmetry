@@ -5,7 +5,8 @@
   python3 tools/fetch_dep.py key <name>            print a cache key: <name>-<pin>[-<patch hash>]
   python3 tools/fetch_dep.py get <name> <field>    print one field of the pin
 
-Names: mujoco (release tarball, sha256 checked), wicked and raven (git commit; wicked also gets
+Names: mujoco (release tarball, sha256 checked), mujoco-macos (the release .dmg, macOS only: <dest> gets
+mujoco.framework plus include/mujoco and lib/libmujoco.dylib pointing into it), wicked and raven (git commit; wicked also gets
 app/viewport/wicked/patches/*.patch applied). A fetched <dest> carries a marker with its key, so a
 second fetch (or a dir restored from a CI cache) is left untouched, mtimes included.
 """
@@ -72,6 +73,41 @@ def fetch_tarball(dep, dest):
         shutil.move(str(src), dest)
 
 
+def download(dep, path):
+    print(f"download {dep['url']}", flush=True)
+    with urllib.request.urlopen(dep["url"]) as r, open(path, "wb") as f:
+        shutil.copyfileobj(r, f)
+    digest = hashlib.sha256(Path(path).read_bytes()).hexdigest()
+    if digest != dep["sha256"]:
+        sys.exit(f"fetch_dep: sha256 mismatch for {dep['url']}: got {digest}, pinned {dep['sha256']}")
+
+
+def fetch_dmg(dep, dest):
+    with tempfile.TemporaryDirectory() as tmp:
+        image = Path(tmp) / "dep.dmg"
+        download(dep, image)
+        mount = Path(tmp) / "mnt"
+        run("hdiutil", "attach", "-nobrowse", "-readonly", "-mountpoint", mount, image)
+        try:
+            found = sorted(mount.rglob("mujoco.framework"))
+            if not found:
+                sys.exit(f"fetch_dep: no mujoco.framework in {dep['url']}")
+            if dest.exists():
+                shutil.rmtree(dest)
+            dest.mkdir(parents=True)
+            run("ditto", found[0], dest / "mujoco.framework")
+        finally:
+            run("hdiutil", "detach", "-quiet", mount)
+    fw = dest / "mujoco.framework"
+    (dest / "include").mkdir()
+    (dest / "include" / "mujoco").symlink_to(fw / "Headers", target_is_directory=True)
+    libs = sorted((fw / "Versions" / "A").glob("libmujoco*.dylib"))
+    if not libs:
+        sys.exit("fetch_dep: no libmujoco*.dylib in mujoco.framework")
+    (dest / "lib").mkdir()
+    (dest / "lib" / "libmujoco.dylib").symlink_to(libs[0])
+
+
 def fetch_git(dep, dest):
     if not (dest / ".git").exists():
         dest.mkdir(parents=True, exist_ok=True)
@@ -93,6 +129,8 @@ def fetch(name, dest):
         return
     if "repo" in dep:
         fetch_git(dep, dest)
+    elif dep["url"].endswith(".dmg"):
+        fetch_dmg(dep, dest)
     else:
         fetch_tarball(dep, dest)
     marker.write_text(want + "\n")

@@ -19,6 +19,11 @@ if(MUJOCO_ROOT)
   set_target_properties(fulmetry_mujoco_imported PROPERTIES
     IMPORTED_LOCATION "${FULMETRY_MUJOCO_LIBRARY}"
     INTERFACE_INCLUDE_DIRECTORIES "${FULMETRY_MUJOCO_INCLUDE_DIR}")
+  if(APPLE)
+    # The macOS release is mujoco.framework, linked as @rpath/mujoco.framework/...: build-tree binaries find it
+    # in MUJOCO_ROOT; the app bundle carries it in Contents/Frameworks.
+    set_target_properties(fulmetry_mujoco_imported PROPERTIES INTERFACE_LINK_OPTIONS "LINKER:-rpath,${MUJOCO_ROOT}")
+  endif()
   set(FULMETRY_MUJOCO_TARGET fulmetry_mujoco_imported)
   message(STATUS "fulmetry_sim: MuJoCo from MUJOCO_ROOT=${MUJOCO_ROOT}")
 else()

@@ -19,6 +19,12 @@
       "cacheVariables": { "CMAKE_BUILD_TYPE": "Release", "FULMETRY_WITH_WICKED": "ON", "WICKED_ROOT": "$env{WICKED_ROOT}",
                           "FULMETRY_WITH_RAVEN_GUI": "ON", "RAVEN_GUI_ROOT": "$env{RAVEN_GUI_ROOT}",
                           "FULMETRY_WITH_MUJOCO": "ON", "MUJOCO_ROOT": "$env{MUJOCO_ROOT}" } },
+    { "name": "release", "displayName": "Release build of the app (tools/package, .github/workflows/release.yml): WICKED_ROOT, RAVEN_GUI_ROOT, MUJOCO_ROOT from env",
+      "inherits": "dev", "binaryDir": "build/release",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release", "FULMETRY_BUILD_TESTS": "OFF", "CMAKE_OSX_DEPLOYMENT_TARGET": "15.0",
+                          "FULMETRY_WITH_WICKED": "ON", "WICKED_ROOT": "$env{WICKED_ROOT}",
+                          "FULMETRY_WITH_RAVEN_GUI": "ON", "RAVEN_GUI_ROOT": "$env{RAVEN_GUI_ROOT}",
+                          "FULMETRY_WITH_MUJOCO": "ON", "MUJOCO_ROOT": "$env{MUJOCO_ROOT}" } },
     { "name": "full", "inherits": "dev", "binaryDir": "build/full",
       "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
       "cacheVariables": { "FULMETRY_WITH_RAVEN_GUI": "ON", "FULMETRY_WITH_WICKED": "ON",
@@ -27,7 +33,8 @@
   "buildPresets": [
     { "name": "dev", "configurePreset": "dev" }, { "name": "ci", "configurePreset": "ci" },
     { "name": "ci-mujoco", "configurePreset": "ci-mujoco" }, { "name": "ci-wicked", "configurePreset": "ci-wicked" },
-    { "name": "ci-raven", "configurePreset": "ci-raven" }, { "name": "ci-m1", "configurePreset": "ci-m1" }
+    { "name": "ci-raven", "configurePreset": "ci-raven" }, { "name": "ci-m1", "configurePreset": "ci-m1" },
+    { "name": "release", "configurePreset": "release", "targets": ["fulmetry_workbench"] }
   ],
   "testPresets": [
     { "name": "dev", "configurePreset": "dev", "output": { "outputOnFailure": true } },

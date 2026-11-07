@@ -1,0 +1,164 @@
+name: release
+
+# The downloadable app. A pushed tag v* builds Fulmetry.app for Apple silicon and the Linux x86_64 tarball and
+# attaches both to a GitHub release of that tag. A pull request that touches the packaging builds them too (as
+# workflow artifacts, nothing is released), and so does a manual run.
+on:
+  push:
+    tags: ["v*"]
+  pull_request:
+    paths:
+      - ".github/workflows/release.yml"
+      - "tools/package/**"
+      - "tools/deps.json"
+      - "tools/fetch_dep.py"
+      - "app/viewport/**"
+      - "app/ui/raven/main.cpp"
+      - "CMakePresets.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  macos:
+    name: Fulmetry.app (macOS, Apple silicon)
+    runs-on: macos-26
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Version
+        id: v
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then echo "version=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          else echo "version=v0.0.0-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"; fi
+      - name: Install
+        run: brew install molten-vk ninja
+      - name: Locate dependencies
+        id: dep
+        run: |
+          deps=$(cd "$GITHUB_WORKSPACE/.." && pwd)/deps
+          echo "WICKED_ROOT=$deps/wicked" >> "$GITHUB_ENV"
+          echo "RAVEN_GUI_ROOT=$deps/raven" >> "$GITHUB_ENV"
+          echo "MUJOCO_ROOT=$deps/mujoco" >> "$GITHUB_ENV"
+          echo "FULMETRY_WICKED_SHADER_CACHE=$deps/wicked-shader-cache" >> "$GITHUB_ENV"
+          echo "key=$(python3 tools/fetch_dep.py key wicked)" >> "$GITHUB_OUTPUT"
+      - name: Restore Wicked build
+        uses: actions/cache@v4
+        with:
+          path: build/release/app/viewport/wicked/xcode
+          key: macos-${{ steps.dep.outputs.key }}-xcode-v1
+      - name: Fetch Wicked Engine, Raven and MuJoCo
+        run: |
+          python3 tools/fetch_dep.py fetch wicked "$WICKED_ROOT"
+          python3 tools/fetch_dep.py fetch raven "$RAVEN_GUI_ROOT"
+          python3 tools/fetch_dep.py fetch mujoco-macos "$MUJOCO_ROOT"
+      - name: Configure
+        run: cmake --preset release
+      - name: Build
+        run: cmake --build --preset release
+      - name: Smoke run (Metal stage, null window)
+        # The live stage renders the rover on the runner's Metal device and Simulate drives it on MuJoCo; the UI
+        # runs on Raven's null backend.
+        run: |
+          build/release/app/ui/fulmetry_workbench --headless --strict --frames 30 --simulate --sim-seconds 3 | tee smoke.log
+          grep -q "stage: Wicked" smoke.log
+          grep -q "simulate: t 3.00 s" smoke.log
+      - name: Package
+        run: tools/package/macos.sh build/release dist "${{ steps.v.outputs.version }}"
+      - name: Screenshot of the packaged app
+        # A real window through MoltenVK on the runner's desktop. Best effort: some runners have no display.
+        continue-on-error: true
+        run: |
+          mkdir -p shots
+          dist/Fulmetry.app/Contents/MacOS/Fulmetry --frames 40 --strict --shot "$PWD/shots/macos-app.png"
+          dist/Fulmetry.app/Contents/MacOS/Fulmetry --frames 40 --strict --simulate --sim-seconds 7.3 \
+            --shot "$PWD/shots/macos-simulate.png"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fulmetry-macos-arm64
+          path: dist/*.zip
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: macos-screenshots
+          path: shots/
+          if-no-files-found: ignore
+
+  linux:
+    name: Linux x86_64 tarball
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      VK_ICD_FILENAMES: /usr/share/vulkan/icd.d/lvp_icd.json
+    steps:
+      - uses: actions/checkout@v4
+      - name: Version
+        id: v
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then echo "version=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          else echo "version=v0.0.0-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"; fi
+      - name: Install
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsdl2-dev libvulkan-dev mesa-vulkan-drivers ninja-build libx11-dev patchelf
+      - name: Locate dependencies
+        id: dep
+        run: |
+          deps=$(realpath -m "$GITHUB_WORKSPACE/../deps")
+          echo "WICKED_ROOT=$deps/wicked" >> "$GITHUB_ENV"
+          echo "RAVEN_GUI_ROOT=$deps/raven" >> "$GITHUB_ENV"
+          echo "MUJOCO_ROOT=$deps/mujoco" >> "$GITHUB_ENV"
+          echo "FULMETRY_WICKED_SHADER_CACHE=$deps/wicked-shader-cache" >> "$GITHUB_ENV"
+          echo "key=$(python3 tools/fetch_dep.py key wicked)" >> "$GITHUB_OUTPUT"
+      - name: Restore Wicked build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.WICKED_ROOT }}
+            build/release
+          key: linux-${{ steps.dep.outputs.key }}-release-v1
+      - name: Fetch Wicked Engine, Raven and MuJoCo
+        run: |
+          python3 tools/fetch_dep.py fetch wicked "$WICKED_ROOT"
+          python3 tools/fetch_dep.py fetch raven "$RAVEN_GUI_ROOT"
+          python3 tools/fetch_dep.py fetch mujoco "$MUJOCO_ROOT"
+      - name: Configure
+        run: cmake --preset release
+      - name: Build
+        run: cmake --build --preset release
+      - name: Package
+        run: tools/package/linux.sh build/release dist "${{ steps.v.outputs.version }}"
+      - name: Smoke run of the package
+        run: |
+          tar -C "$RUNNER_TEMP" -xzf dist/*.tar.gz
+          "$RUNNER_TEMP"/fulmetry-*/fulmetry --headless --strict --frames 30 --simulate --sim-seconds 3 | tee smoke.log
+          grep -q "stage: Wicked" smoke.log
+          grep -q "simulate: t 3.00 s" smoke.log
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fulmetry-linux-x86_64
+          path: dist/*.tar.gz
+          if-no-files-found: error
+
+  release:
+    name: GitHub release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [macos, linux]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+          pattern: fulmetry-*
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/* --title "Fulmetry $GITHUB_REF_NAME" \
+            --notes-file tools/package/RELEASE_NOTES.md --prerelease
