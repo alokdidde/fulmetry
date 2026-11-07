@@ -9,6 +9,7 @@ set(WICKED_LINUX_TEMPLATE OFF CACHE BOOL "" FORCE)
 set(WICKED_WINDOWS_TEMPLATE OFF CACHE BOOL "" FORCE)
 # macOS: Wicked's CMake does not build for Apple (Metal); its Xcode project does. Build the WickedEngine_MacOS static
 # library with xcodebuild into this build tree and import it as WickedEngine. Needs Xcode (the macOS 26 SDK).
+# WICKED_LAZY_OBJECT_PSO (patches/0001) as on Linux: compiling every object pipeline at startup takes many minutes.
 if(APPLE)
   set(_wicked_derived ${CMAKE_CURRENT_BINARY_DIR}/xcode)
   set(_wicked_lib ${_wicked_derived}/Build/Products/Release/libWickedEngine_MacOS.a)
@@ -17,6 +18,7 @@ if(APPLE)
     COMMAND xcodebuild -project ${WICKED_ROOT}/WickedEngine/WickedEngine.xcodeproj -target WickedEngine_MacOS
             -configuration Release -arch arm64 ONLY_ACTIVE_ARCH=NO SYMROOT=${_wicked_derived}/Build/Products
             OBJROOT=${_wicked_derived}/Build/Intermediates MACOSX_DEPLOYMENT_TARGET=${FULMETRY_MACOS_DEPLOYMENT}
+            "GCC_PREPROCESSOR_DEFINITIONS=JPH_DEBUG_RENDERER WICKED_LAZY_OBJECT_PSO"
             CODE_SIGNING_ALLOWED=NO -quiet build
     COMMENT "Wicked Engine (Metal) with xcodebuild"
     VERBATIM)

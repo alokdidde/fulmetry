@@ -55,7 +55,12 @@ jobs:
         uses: actions/cache@v4
         with:
           path: build/release/app/viewport/wicked/xcode
-          key: macos-${{ steps.dep.outputs.key }}-xcode-v1
+          key: macos-${{ steps.dep.outputs.key }}-xcode-v2
+      - name: Restore shader cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.FULMETRY_WICKED_SHADER_CACHE }}
+          key: macos-${{ steps.dep.outputs.key }}-shaders-v1
       - name: Fetch Wicked Engine, Raven and MuJoCo
         run: |
           python3 tools/fetch_dep.py fetch wicked "$WICKED_ROOT"
@@ -65,7 +70,10 @@ jobs:
         run: cmake --preset release
       - name: Build
         run: cmake --build --preset release
+      - name: GPU
+        run: system_profiler SPDisplaysDataType | head -20
       - name: Smoke run (Metal stage, null window)
+        timeout-minutes: 25
         # The live stage renders the rover on the runner's Metal device and Simulate drives it on MuJoCo; the UI
         # runs on Raven's null backend.
         run: |
