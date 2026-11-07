@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Fulmetry S5 spike: the workbench shell in Raven GUI XML.
+  A 3D stage fills the window; the project chat is docked on the right
+  (352 px of a 1440 px window = DockSize 0.2444); everything else floats over the stage.
+  Live reload is on: save this file while raven_spike runs and the window follows.
+-->
+<Window Title="Fulmetry - Raven spike" Width="1440" Height="900" MinWidth="900" MinHeight="560">
+	<DockArea Name="dock" Tearable="false">
+		<Overlay Name="stage.panel" Slot.Title="Stage" Slot.Closable="false">
+			<Stage Name="stage"/>
+
+			<!-- floating tool bar, top left -->
+			<Border Name="tools" Slot.HAlign="Left" Slot.VAlign="Top" Slot.Padding="16,16,0,0"
+				Background="#FFFFFF" CornerRadius="3" BorderColor="#E4E4E7" BorderWidth="1" Shadow="12,0,2" Padding="6">
+				<HBox Spacing="4">
+					<Button Text="Select" Style="Primary"/>
+					<Button Text="Explode" Style="Flat"/>
+					<Button Text="Joints" Style="Flat"/>
+					<Button Text="X-ray" Style="Flat"/>
+				</HBox>
+			</Border>
+
+			<!-- floating revision chip, bottom left -->
+			<Border Slot.HAlign="Left" Slot.VAlign="Bottom" Slot.Padding="16,0,0,16"
+				Background="#FFFFFF" CornerRadius="3" BorderColor="#E4E4E7" BorderWidth="1" Shadow="12,0,2" Padding="10,6">
+				<Label Name="stats" Text="rev 12 - desk rover" TextSize="12"/>
+			</Border>
+		</Overlay>
+
+		<VBox Name="chat" Slot.Title="Project chat" Slot.Dock="Right" Slot.DockSize="0.2444" Slot.Closable="false">
+			<ScrollBox Name="messages" Slot.Fill="1">
+				<VBox Name="message.list" Spacing="8" Slot.Padding="12,12,12,12"/>
+			</ScrollBox>
+			<Separator/>
+			<HBox Spacing="8" Slot.Padding="12,10,12,12">
+				<TextInput Name="composer" Placeholder="Message the project..." Slot.Fill="1"/>
+				<Button Text="Send" Style="Primary" OnClicked="chat.send"/>
+			</HBox>
+		</VBox>
+	</DockArea>
+</Window>

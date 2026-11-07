@@ -13,6 +13,7 @@
   "buildPresets": [ { "name": "dev", "configurePreset": "dev" }, { "name": "ci", "configurePreset": "ci" } ],
   "testPresets": [
     { "name": "dev", "configurePreset": "dev", "output": { "outputOnFailure": true } },
-    { "name": "ci", "configurePreset": "ci", "output": { "outputOnFailure": true } }
+    { "name": "ci", "configurePreset": "ci", "output": { "outputOnFailure": true },
+      "execution": { "noTestsAction": "error", "timeout": 300 } }
   ]
 }
