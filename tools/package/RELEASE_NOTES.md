@@ -15,6 +15,13 @@ with a still picture of the rover in place of the live stage.
    `xattr -dr com.apple.quarantine /Applications/Fulmetry.app` in Terminal and open the app, or click **Done**, go
    to **System Settings > Privacy & Security**, click **Open Anyway** next to the Fulmetry line, and confirm.
 
+To skip these steps for every future build, run this once in Terminal. It installs the newest build, opens it, and
+from then on checks every 10 minutes and swaps in each new release (`--remove-agent` stops it):
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/alokdidde/fulmetry/main/tools/mac/fulmetry-update.sh | bash -s -- --install-agent
+```
+
 The first launch opens the sign-in wizard for your coding agents, then the home screen, where you start a project from an
 idea or open the desk rover sample.
 
