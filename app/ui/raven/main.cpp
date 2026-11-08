@@ -4,7 +4,7 @@
 //                      [--size 1440x900] [--chat-left] [--open tray|menu] [--select <part id>] [--hover <part id>] [--tab N]
 //                      [--explode] [--xray] [--orbit DX,DY] [--zoom N] [--still] [--interactive-scale S]
 //                      [--frames N] [--run-seconds S] [--shot out.png] [--headless] [--strict]
-//                      [--harnesses fresh|some|all] [--open onboard|picker|home] [--onboard <harness id>] [--do <command>]...
+//                      [--harnesses fresh|some|all] [--cli-accounts] [--open onboard|picker|home] [--onboard <harness id>] [--do <command>]...
 //                      [--simulate [setup.json]] [--sim-seconds T] [--sim-drive THROTTLE,STEER]
 //
 // Without --project the app opens on the home screen (start a project from an idea, open a recent one or the
@@ -17,7 +17,9 @@
 // --headless uses Raven's null platform and backend (no display, no GPU): the ctest runs it that way.
 // --strict exits with 2 when Raven reported any warning or error (unknown XML tag or attribute, missing file...).
 // --harnesses sets which harnesses the fake back end starts with ready (fresh: none, the first-run onboarding).
-// Without it, fresh until the sign-in wizard has been finished once (settings.json), so the first run opens it.
+// Without it, fresh until the sign-in wizard has been finished once (settings.json), so the first run opens it,
+// and Claude Code and Codex are the real ones: installed, signed in and out through their own CLIs (CliSignIn).
+// --cli-accounts does that with --harnesses too.
 // --do runs a harness command once the window is up, as its button would (WorkbenchView::harnessCommand), e.g.
 // --do signin:codex. The chosen harness and model are kept in settings.json under FULMETRY_CONFIG_DIR, else
 // $XDG_CONFIG_HOME/fulmetry or ~/.config/fulmetry (%APPDATA%\Fulmetry on Windows).
@@ -62,6 +64,7 @@
 #include "WorkbenchView.h"
 #include "fakes/FakeAgentClient.h"
 #include "fakes/FakeSimulation.h"
+#include "fulmetry/net/CliSignIn.h"
 #include "fulmetry/project/ProjectIO.h"
 #include "fulmetry/ui/ProjectLibrary.h"
 #if defined(FULMETRY_HAS_WICKED)
@@ -104,6 +107,7 @@ struct Options {
     float orbitX = 0, orbitY = 0, zoom = 0;
     float interactiveScale = 1;
     bool chatLeft = false, headless = false, strict = false;
+    bool cliAccounts = false;
     bool still = false, explode = false, xray = false;
 };
 
@@ -187,6 +191,7 @@ Options parse(int argc, char** argv) {
         else if (a == "--hover") o.hover = next();
         else if (a == "--shot") o.shot = next();
         else if (a == "--harnesses") o.harnesses = next();
+        else if (a == "--cli-accounts") o.cliAccounts = true;
         else if (a == "--onboard") o.onboard = next();
         else if (a == "--do") o.commands.push_back(next());
         else if (a == "--simulate") {
@@ -304,7 +309,10 @@ int main(int argc, char** argv) {
     ui::ProjectLibrary library(projectsDir(), settingsPath().string());
     // The first run (the sign-in wizard never finished) starts with no coding agent signed in, so the wizard opens.
     bool onboarded = loadOnboarded();
-    if (o.harnesses.empty()) o.harnesses = onboarded ? "some" : "fresh";
+    if (o.harnesses.empty()) {
+        o.harnesses = onboarded ? "some" : "fresh";
+        o.cliAccounts = true;
+    }
 
     RInitDesc desc{};
     desc.backend = o.headless ? R_BACKEND_NULL : R_BACKEND_VULKAN;
@@ -407,8 +415,16 @@ int main(int argc, char** argv) {
         const auto start0 = o.harnesses == "fresh" ? fakes::FakeAgentClient::Harnesses::Fresh
                             : o.harnesses == "all"   ? fakes::FakeAgentClient::Harnesses::All
                                                      : fakes::FakeAgentClient::Harnesses::Some;
-        fakes::FakeAgentClient agent(project.value(), false, start0);
-        if (!harnessState.empty()) agent.restoreHarnesses(harnessState);
+        auto fakeAgent = std::make_unique<fakes::FakeAgentClient>(project.value(), false, start0);
+        if (!harnessState.empty()) fakeAgent->restoreHarnesses(harnessState);
+        fakes::FakeAgentClient* fake = fakeAgent.get();
+        std::unique_ptr<IAgentClient> agentOwned = std::move(fakeAgent);
+        if (o.cliAccounts) {
+            net::CliSignInOptions co;
+            co.onReadyChanged = [fake](const std::string& id, bool ready) { fake->setHarnessReady(id, ready); };
+            agentOwned = std::make_unique<net::CliSignInClient>(std::move(agentOwned), std::move(co));
+        }
+        IAgentClient& agent = *agentOwned;
         model.setPreferredChoice(loadChoice());
         ui::HarnessChoice savedChoice = model.preferredChoice();
         agent.connect("fake://workbench");

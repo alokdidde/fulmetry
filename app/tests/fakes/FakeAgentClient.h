@@ -192,6 +192,15 @@ public:
         return Ok{};
     }
 
+    // Follows a sign-in made elsewhere (CliSignInClient in the app): agents run on the harness only while ready.
+    void setHarnessReady(const std::string& id, bool ready) {
+        Harness* h = harness(id);
+        if (!h || h->status == HarnessStatus::Disabled) return;
+        h->setup = {};
+        h->status = ready ? HarnessStatus::Ready : HarnessStatus::NeedsSignIn;
+        harnessesChanged_ = true;
+    }
+
     Status setHarnessEnabled(const std::string& id, bool enabled) override {
         Harness* h = harness(id);
         if (!h) return Error{"not_found", id};
