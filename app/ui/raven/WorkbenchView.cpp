@@ -303,8 +303,13 @@ void WorkbenchView::sync() {
     if (model_.harnessVersion() != shownHarness_) {
         buildHarnessChip();
         if (pickerOpen_) buildPicker();
-        // The first run opens the onboarding screen by itself, until the person closes it.
-        if (!onboardOpen_ && onboardAuto_ && model_.needsOnboarding() && !model_.harnesses().empty()) setOnboardOpen(true);
+        // The first run opens the onboarding screen by itself, until the person closes it; not while a sign-in is
+        // still being checked, since that one may turn out ready.
+        const auto& hs = model_.harnesses();
+        const bool checking = std::any_of(hs.begin(), hs.end(), [](const Harness& h) {
+            return h.status == HarnessStatus::Checking && h.setup.step == HarnessSetup::Step::Verifying;
+        });
+        if (!onboardOpen_ && onboardAuto_ && model_.needsOnboarding() && !hs.empty() && !checking) setOnboardOpen(true);
         else if (onboardOpen_) buildOnboard();
         if (homeOpen_) buildHome();
         shownHarness_ = model_.harnessVersion();
@@ -564,6 +569,7 @@ void WorkbenchView::buildMenu() {
                     if (action == "xray") model_.setXray(!model_.xray());
                     if (action == "open-chat") Rwidget_focus(find("composer"));
                     if (action == "sim" && simulateHandler_) simulateHandler_();
+                    if (action == "agents") setOnboardOpen(true);
                     if (actionHandler_) actionHandler_(action);
                 });
             }, {bg, it.on ? 0xF9DEDCu : 0xECEFF2u, 1, 1, true});
@@ -579,7 +585,8 @@ void WorkbenchView::buildMenu() {
                    {"reset", "Reset view", "R", "reset-view"}, {"joint", "Joints", "J", "joints"},
                    {"show", "Show hidden", "", "show-all"}, {"cube", "All objects", "", "all", model_.activeTab() == 0}});
     group("Project", {{"plus", "New object", "N", "new"}, {"sim", "Simulate", "S", "sim"},
-                      {"pin", "Pin comment", "C", "pin-mode"}, {"chat", "Open chat", "", "open-chat"}});
+                      {"pin", "Pin comment", "C", "pin-mode"}, {"chat", "Open chat", "", "open-chat"},
+                      {"harness", "Agents", "", "agents"}});
 }
 
 // ------------------------------------------------------------------ pinned comment

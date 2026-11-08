@@ -43,7 +43,7 @@ if(FULMETRY_WITH_RAVEN_GUI)
   # without it, fulmetry_viewport is an interface target and the stage shows assets/stage/rover-highkey.png.
   # fulmetry_sim brings MuJoCo for Simulate when FULMETRY_WITH_MUJOCO is on (FULMETRY_HAS_MUJOCO); else the fake.
   target_link_libraries(fulmetry_workbench PRIVATE fulmetry_ui_raven fulmetry_project fulmetry_viewport fulmetry_sim
-                                                   fulmetry_third_party)
+                                                   fulmetry_net fulmetry_third_party)
   if(FULMETRY_WITH_WICKED)
     fulmetry_wicked_runtime(fulmetry_workbench)
   endif()

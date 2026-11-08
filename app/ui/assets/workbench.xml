@@ -192,7 +192,7 @@
 					<Border Name="home.harness.dot" Width="8" Height="8" CornerRadius="4" Background="#66707B" Slot.VAlign="Center"/>
 					<Label Name="home.harness" Font="fonts/Inter-SemiBold.ttf" TextSize="13" Color="#14171A" Slot.VAlign="Center" Slot.Fill="1"/>
 					<Border Name="home.agents" Background="#F3F5F7" BorderColor="#E1E5EA" BorderWidth="1" CornerRadius="3" Padding="14,8" Cursor="Hand">
-						<Label Font="fonts/Inter-SemiBold.ttf" TextSize="13" Color="#14171A">Sign in to coding agents</Label>
+						<Label Font="fonts/Inter-SemiBold.ttf" TextSize="13" Color="#14171A">Manage coding agents</Label>
 					</Border>
 				</HBox>
 			</VBox>
