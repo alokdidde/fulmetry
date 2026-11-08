@@ -2,7 +2,7 @@ An early build of the Fulmetry workbench: the home screen (start a project from 
 and the desk rover sample on the live 3D stage with its parts and checks, explode and x-ray, and Simulate (the
 living-room drive test on MuJoCo).
 
-The project chat and the sign-in run on a stand-in agent for now: it answers, but it does not change the project yet.
+On the Mac the project chat and the sign-in talk to your real coding agents (Claude Code, Codex and the others) through T3 Code, which ships inside the app with its own Node.js. If it cannot start, the app says so and falls back to a stand-in agent. The Linux build still uses the stand-in.
 
 ## macOS (Apple silicon)
 

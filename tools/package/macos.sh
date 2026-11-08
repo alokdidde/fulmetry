@@ -37,6 +37,18 @@ ditto "$METAL_SHADERS" "$APP/Contents/Resources/wicked-shaders-metal"
 find "$APP/Contents/Resources/wicked-shaders-metal" -name "*.wishadermeta" -delete
 test -f "$APP/Contents/Resources/wicked-shaders-metal/impostorPS.cso"
 
+# T3 Code's server (tools/package/t3-stage.mjs) and the Node.js that runs it; the app finds both here
+# (app/net/src/AgentClient.cpp). Without T3_STAGE the app falls back to simulated agents.
+if [ -n "${T3_STAGE:-}" ]; then
+  test -f "$T3_STAGE/bin.mjs" || { echo "no bin.mjs in T3_STAGE=$T3_STAGE" >&2; exit 1; }
+  ditto "$T3_STAGE" "$APP/Contents/Resources/t3"
+  mkdir -p "$APP/Contents/Resources/node/bin"
+  cp "${NODE_BIN:-$(command -v node)}" "$APP/Contents/Resources/node/bin/node"
+  chmod 755 "$APP/Contents/Resources/node/bin/node"
+else
+  echo "T3_STAGE not set: the app will run simulated agents" >&2
+fi
+
 # The build tree's rpath points at MUJOCO_ROOT; the bundle's framework is in Contents/Frameworks.
 install_name_tool -add_rpath @executable_path/../Frameworks "$APP/Contents/MacOS/Fulmetry"
 install_name_tool -delete_rpath "$MUJOCO_ROOT" "$APP/Contents/MacOS/Fulmetry" 2>/dev/null || true
@@ -65,6 +77,13 @@ if [ -n "${MACOS_SIGN_IDENTITY:-}" ]; then
   ENT=$ROOT/tools/package/macos.entitlements
   sign() { codesign --force --timestamp --options runtime --sign "$MACOS_SIGN_IDENTITY" "$@"; }
   sign "$APP"/Contents/MacOS/*.dylib "$APP/Contents/Frameworks/libMoltenVK.dylib"
+  # Every Mach-O in T3 Code's packages (native addons, helper binaries), then Node with the JIT it needs.
+  if [ -d "$APP/Contents/Resources/t3" ]; then
+    find "$APP/Contents/Resources/t3" -type f -print0 | while IFS= read -r -d '' f; do
+      if file -b "$f" | grep -q 'Mach-O'; then sign "$f"; fi
+    done
+    sign --entitlements "$ROOT/tools/package/node.entitlements" "$APP/Contents/Resources/node/bin/node"
+  fi
   sign "$APP/Contents/Frameworks/mujoco.framework"
   sign --entitlements "$ENT" "$APP"
   codesign --verify --strict --deep "$APP"
