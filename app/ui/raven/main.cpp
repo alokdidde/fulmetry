@@ -64,6 +64,7 @@
 #include "WorkbenchView.h"
 #include "fakes/FakeAgentClient.h"
 #include "fakes/FakeSimulation.h"
+#include "fulmetry/net/AgentClient.h"
 #include "fulmetry/net/CliSignIn.h"
 #include "fulmetry/project/ProjectIO.h"
 #include "fulmetry/ui/ProjectLibrary.h"
@@ -309,6 +310,9 @@ int main(int argc, char** argv) {
     ui::ProjectLibrary library(projectsDir(), settingsPath().string());
     // The first run (the sign-in wizard never finished) starts with no coding agent signed in, so the wizard opens.
     bool onboarded = loadOnboarded();
+    // A plain launch talks to real coding agents through T3 Code; --harnesses (tests, screenshots) and --headless
+    // keep the scripted fake.
+    const bool realAgents = o.harnesses.empty() && !o.headless;
     if (o.harnesses.empty()) {
         o.harnesses = onboarded ? "some" : "fresh";
         o.cliAccounts = true;
@@ -412,22 +416,30 @@ int main(int argc, char** argv) {
 #endif
         (void)viewportTried;
 
-        const auto start0 = o.harnesses == "fresh" ? fakes::FakeAgentClient::Harnesses::Fresh
-                            : o.harnesses == "all"   ? fakes::FakeAgentClient::Harnesses::All
-                                                     : fakes::FakeAgentClient::Harnesses::Some;
-        auto fakeAgent = std::make_unique<fakes::FakeAgentClient>(project.value(), false, start0);
-        if (!harnessState.empty()) fakeAgent->restoreHarnesses(harnessState);
-        fakes::FakeAgentClient* fake = fakeAgent.get();
-        std::unique_ptr<IAgentClient> agentOwned = std::move(fakeAgent);
+        net::AgentClientOptions ao;
+        ao.forceFake = !realAgents;
+        ao.fakeHarnesses = o.harnesses == "fresh" ? net::AgentClientOptions::FakeHarnesses::Fresh
+                           : o.harnesses == "all" ? net::AgentClientOptions::FakeHarnesses::All
+                                                  : net::AgentClientOptions::FakeHarnesses::Some;
+        ao.projectRoot = home ? library.root() : std::filesystem::absolute(next).parent_path().string();
+        if (home) {
+            std::error_code ec;
+            std::filesystem::create_directories(ao.projectRoot, ec);
+        }
+        std::unique_ptr<IAgentClient> agentOwned = net::makeAgentClient(project.value(), ao);
+        // Only the fake (forced, or the fallback when T3 Code cannot start) keeps harness state here; the real
+        // client gets it from T3 Code.
+        auto* fake = dynamic_cast<fakes::FakeAgentClient*>(agentOwned.get());
+        if (fake && !harnessState.empty()) fake->restoreHarnesses(harnessState);
+        std::printf("agents: %s\n", fake ? "simulated" : "T3 Code");
         if (o.cliAccounts) {
             net::CliSignInOptions co;
-            co.onReadyChanged = [fake](const std::string& id, bool ready) { fake->setHarnessReady(id, ready); };
+            if (fake) co.onReadyChanged = [fake](const std::string& id, bool ready) { fake->setHarnessReady(id, ready); };
             agentOwned = std::make_unique<net::CliSignInClient>(std::move(agentOwned), std::move(co));
         }
         IAgentClient& agent = *agentOwned;
         model.setPreferredChoice(loadChoice());
         ui::HarnessChoice savedChoice = model.preferredChoice();
-        agent.connect("fake://workbench");
         EventBus bus;
 
         Rid window = R_INVALID_ID;

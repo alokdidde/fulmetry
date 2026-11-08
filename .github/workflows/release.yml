@@ -101,6 +101,24 @@ jobs:
           grep -q "workbench ready" smoke.log
           grep -Eq "stage: (Wicked|still image)" smoke.log
           if grep -q "stage: Wicked" smoke.log; then grep -q "simulate: t 3.00 s" smoke.log; fi
+      # T3 Code runs the coding agents: its server (the fork in agent/t3code, `t3 fulmetry`) and the Node.js it needs
+      # ship inside the app, so a plain download talks to real agents with nothing else installed.
+      - name: T3 Code checkout
+        run: git submodule update --init --depth 1 agent/t3code
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: agent/t3code/package.json
+      - name: T3 Code server
+        working-directory: agent/t3code
+        env:
+          T3CODE_TELEMETRY_CHANNEL: dev
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile --filter "t3..." --filter t3code
+          (cd apps/server && pnpm exec vp pack)
+          node "$GITHUB_WORKSPACE/tools/package/t3-stage.mjs" . "$GITHUB_WORKSPACE/build/release/t3"
+          echo "T3_STAGE=$GITHUB_WORKSPACE/build/release/t3" >> "$GITHUB_ENV"
+          echo "NODE_BIN=$(node -p process.execPath)" >> "$GITHUB_ENV"
       - name: Signing certificate
         # Developer ID signing and notarization run once the MACOS_CERT_* and NOTARY_* secrets exist (an Apple Developer
         # Program account). Without them, or on a pull request, the app is signed ad hoc and Gatekeeper warns on first open.
@@ -128,6 +146,14 @@ jobs:
         env:
           MACOS_SIGN_IDENTITY: ${{ steps.sign.outputs.identity }}
         run: tools/package/macos.sh build/release dist "${{ steps.v.outputs.version }}"
+      - name: Bundled T3 Code starts
+        run: |
+          r=dist/Fulmetry.app/Contents/Resources
+          home=$(mktemp -d)
+          (sleep 40) | "$r/node/bin/node" "$r/t3/bin.mjs" fulmetry --base-dir "$home" > t3-smoke.log 2> t3-smoke.err &
+          for _ in $(seq 1 60); do grep -q '"fulmetry.ready"' t3-smoke.log && break; sleep 1; done
+          grep -q '"fulmetry.ready"' t3-smoke.log || { tail -40 t3-smoke.err; exit 1; }
+          echo "the bundled T3 Code bridge is ready"
       - name: Notarize
         if: steps.sign.outputs.identity != ''
         env:

@@ -44,6 +44,13 @@ fs::path executablePath() {
 // usual install places are tried too.
 std::string findNode() {
     if (auto n = env("FULMETRY_NODE"); !n.empty()) return n;
+    // The Node.js the release bundles with T3 Code (tools/package/macos.sh), so nothing needs installing.
+    if (auto exe = executablePath(); !exe.empty()) {
+        for (const auto& c : {exe.parent_path() / "../Resources/node/bin/node", exe.parent_path() / "node/bin/node"}) {
+            std::error_code ec;
+            if (fs::is_regular_file(c, ec)) return fs::weakly_canonical(c).string();
+        }
+    }
 #ifdef _WIN32
     const char sep = ';';
     const char* exe = "node.exe";
