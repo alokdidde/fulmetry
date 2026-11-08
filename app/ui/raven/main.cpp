@@ -1,12 +1,15 @@
 // fulmetry_workbench: the M1 workbench shell (Raven GUI) on the real project model and a fake agent back end.
 //
-//   fulmetry_workbench [--project fulmetry.project.json] [--chat sample-chat.json] [--assets app/ui/assets]
+//   fulmetry_workbench [--project fulmetry.project.json|sample] [--chat sample-chat.json] [--assets app/ui/assets]
 //                      [--size 1440x900] [--chat-left] [--open tray|menu] [--select <part id>] [--hover <part id>] [--tab N]
 //                      [--explode] [--xray] [--orbit DX,DY] [--zoom N] [--still] [--interactive-scale S]
 //                      [--frames N] [--run-seconds S] [--shot out.png] [--headless] [--strict]
-//                      [--harnesses fresh|some|all] [--open onboard|picker] [--onboard <harness id>] [--do <command>]...
+//                      [--harnesses fresh|some|all] [--cli-accounts] [--open onboard|picker|home] [--onboard <harness id>] [--do <command>]...
 //                      [--simulate [setup.json]] [--sim-seconds T] [--sim-drive THROTTLE,STEER]
 //
+// Without --project the app opens on the home screen (start a project from an idea, open a recent one or the
+// sample); "--project sample" opens the desk rover. New projects go to FULMETRY_PROJECTS_DIR, else
+// ~/Documents/Fulmetry. --do create:<idea> starts one as the Create project button would.
 // Built with FULMETRY_WITH_WICKED, the stage is the live Wicked render of the project (LiveStage); --still
 // shows the pre-rendered image instead, which is all a build without Wicked has. --shot waits for the stage's
 // resting (soft-shadow) render. --orbit drags the camera by DX,DY stage units and --zoom turns the wheel N
@@ -14,6 +17,9 @@
 // --headless uses Raven's null platform and backend (no display, no GPU): the ctest runs it that way.
 // --strict exits with 2 when Raven reported any warning or error (unknown XML tag or attribute, missing file...).
 // --harnesses sets which harnesses the fake back end starts with ready (fresh: none, the first-run onboarding).
+// Without it, fresh until the sign-in wizard has been finished once (settings.json), so the first run opens it,
+// and Claude Code and Codex are the real ones: installed, signed in and out through their own CLIs (CliSignIn).
+// --cli-accounts does that with --harnesses too.
 // --do runs a harness command once the window is up, as its button would (WorkbenchView::harnessCommand), e.g.
 // --do signin:codex. The chosen harness and model are kept in settings.json under FULMETRY_CONFIG_DIR, else
 // $XDG_CONFIG_HOME/fulmetry or ~/.config/fulmetry (%APPDATA%\Fulmetry on Windows).
@@ -24,6 +30,7 @@
 #include <Raven.h>
 
 #include <chrono>
+#include <ctime>
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
@@ -57,7 +64,9 @@
 #include "WorkbenchView.h"
 #include "fakes/FakeAgentClient.h"
 #include "fakes/FakeSimulation.h"
+#include "fulmetry/net/CliSignIn.h"
 #include "fulmetry/project/ProjectIO.h"
+#include "fulmetry/ui/ProjectLibrary.h"
 #if defined(FULMETRY_HAS_WICKED)
 #include "fulmetry/viewport/WickedViewport.h"
 #endif
@@ -76,13 +85,14 @@ namespace {
 
 struct Options {
     std::string assets = FULMETRY_UI_ASSETS;
-    std::string project = FULMETRY_SOURCE_DIR "/fixtures/rover/fulmetry.project.json";
+    std::string project;  // empty: the home screen; "sample": the rover
+    std::string sample = FULMETRY_SOURCE_DIR "/fixtures/rover/fulmetry.project.json";
     std::string chat;
     std::string stage;
     std::string open;
     std::string select, hover;
     std::string shot;
-    std::string harnesses = "some";
+    std::string harnesses;  // empty: fresh on the first run (no harness chosen yet), else some
     std::string onboard;
     std::vector<std::string> commands;
     std::string simSetup = FULMETRY_SOURCE_DIR "/fixtures/rover/sim/living-room.json";
@@ -97,6 +107,7 @@ struct Options {
     float orbitX = 0, orbitY = 0, zoom = 0;
     float interactiveScale = 1;
     bool chatLeft = false, headless = false, strict = false;
+    bool cliAccounts = false;
     bool still = false, explode = false, xray = false;
 };
 
@@ -159,11 +170,14 @@ Options parse(int argc, char** argv) {
     Options o;
     if (const auto res = packagedResources(); !res.empty()) {
         o.assets = (res / "assets").string();
-        o.project = (res / "fixtures" / "rover" / "fulmetry.project.json").string();
+        o.sample = (res / "fixtures" / "rover" / "fulmetry.project.json").string();
         o.simSetup = (res / "fixtures" / "rover" / "sim" / "living-room.json").string();
         // Wicked compiles its shaders on first use from the shipped sources and keeps them between runs.
         setDefaultEnv("FULMETRY_WICKED_SHADER_SOURCE", (res / "wicked-shaders").string());
-        setDefaultEnv("FULMETRY_WICKED_SHADER_CACHE", (userCacheDir() / "shaders").string());
+        // The Mac app ships its Metal shaders compiled (tools/package/macos.sh), so nothing compiles on first launch.
+        const auto shipped = res / "wicked-shaders-metal";
+        setDefaultEnv("FULMETRY_WICKED_SHADER_CACHE",
+                      (std::filesystem::exists(shipped) ? shipped : userCacheDir() / "shaders").string());
     }
     for (int i = 1; i < argc; ++i) {
         const std::string a = argv[i];
@@ -177,6 +191,7 @@ Options parse(int argc, char** argv) {
         else if (a == "--hover") o.hover = next();
         else if (a == "--shot") o.shot = next();
         else if (a == "--harnesses") o.harnesses = next();
+        else if (a == "--cli-accounts") o.cliAccounts = true;
         else if (a == "--onboard") o.onboard = next();
         else if (a == "--do") o.commands.push_back(next());
         else if (a == "--simulate") {
@@ -238,6 +253,25 @@ void saveChoice(const fulmetry::ui::HarnessChoice& c) {
     std::ofstream(path, std::ios::binary | std::ios::trunc) << j.dump(2) << "\n";
 }
 
+// Set once a coding agent is signed in: later launches skip the sign-in wizard.
+bool loadOnboarded() {
+    const auto path = settingsPath();
+    if (path.empty()) return false;
+    auto j = nlohmann::json::parse(slurp(path.string()), nullptr, false);
+    return j.is_object() && j.value("onboarded", false);
+}
+
+void saveOnboarded() {
+    const auto path = settingsPath();
+    if (path.empty()) return;
+    std::error_code ec;
+    std::filesystem::create_directories(path.parent_path(), ec);
+    auto j = nlohmann::json::parse(slurp(path.string()), nullptr, false);
+    if (j.is_discarded() || !j.is_object()) j = nlohmann::json::object();
+    j["onboarded"] = true;
+    std::ofstream(path, std::ios::binary | std::ios::trunc) << j.dump(2) << "\n";
+}
+
 bool saveShot(Rid window, const std::string& path) {
     int w = 0, h = 0;
     uint8_t* px = Rwindow_capture(window, &w, &h);
@@ -247,62 +281,38 @@ bool saveShot(Rid window, const std::string& path) {
     return ok != 0;
 }
 
+// Where new projects go: FULMETRY_PROJECTS_DIR, else Documents/Fulmetry in the home folder.
+std::string projectsDir() {
+    namespace fs = std::filesystem;
+    if (const char* d = std::getenv("FULMETRY_PROJECTS_DIR"); d && *d) return d;
+#ifdef _WIN32
+    if (const char* d = std::getenv("USERPROFILE"); d && *d) return (fs::path(d) / "Documents" / "Fulmetry").string();
+#else
+    if (const char* d = std::getenv("HOME"); d && *d) return (fs::path(d) / "Documents" / "Fulmetry").string();
+#endif
+    return (fs::temp_directory_path() / "Fulmetry").string();
+}
+
+std::string clockNow() {
+    const std::time_t t = std::time(nullptr);
+    char buf[8];
+    std::strftime(buf, sizeof buf, "%H:%M", std::localtime(&t));
+    return buf;
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
     using namespace fulmetry;
-    const Options o = parse(argc, argv);
+    Options o = parse(argc, argv);
     Rerror_set_callback(onError);
-
-    auto project = loadProject(o.project);
-    if (!project.ok()) {
-        std::fprintf(stderr, "cannot load %s: %s\n", o.project.c_str(), project.error().message.c_str());
-        return 1;
+    ui::ProjectLibrary library(projectsDir(), settingsPath().string());
+    // The first run (the sign-in wizard never finished) starts with no coding agent signed in, so the wizard opens.
+    bool onboarded = loadOnboarded();
+    if (o.harnesses.empty()) {
+        o.harnesses = onboarded ? "some" : "fresh";
+        o.cliAccounts = true;
     }
-    ui::WorkbenchModel model(project.value());
-    if (auto st = model.loadChat(slurp(o.chat)); !st.ok())
-        std::fprintf(stderr, "chat %s: %s\n", o.chat.c_str(), st.error().message.c_str());
-    if (o.tab >= 0) model.selectTab(o.tab);
-    if (!o.select.empty() && !model.selectPart(PartId(o.select)))
-        std::fprintf(stderr, "no part %s\n", o.select.c_str());
-    model.setExploded(o.explode);
-    model.setXray(o.xray);
-
-    // The stage: the live render when this build has one, else the still image.
-    std::unique_ptr<IViewport> viewport;
-    ui::LiveStage::Options lo;
-    lo.interactiveScale = o.interactiveScale;
-#if defined(FULMETRY_HAS_WICKED)
-    if (!o.still) {
-        viewport::WickedOptions wo;
-        wo.assetRoot = std::filesystem::absolute(o.project).parent_path().string();  // meshFile paths
-        auto wicked = std::make_unique<viewport::WickedViewport>(wo);
-        // The engine starts on the first render: one small one tells whether this machine's GPU can run it.
-        Status st = wicked->loadProject(project.value());
-        if (st.ok())
-            if (auto probe = wicked->renderToImage(16, 16); !probe.ok()) st = probe.error();
-        if (!st.ok()) {
-            // No GPU the engine can use: the still stage, so the rest of the workbench still works.
-            std::printf("stage: still image, the live stage cannot start: %s\n", st.error().message.c_str());
-        } else {
-            for (const auto& w : wicked->meshWarnings()) std::fprintf(stderr, "stage: %s\n", w.c_str());
-            std::printf("stage: Wicked, %d parts drawn from meshes\n", wicked->meshFileCount());
-            lo.idleFrames = wo.frames;
-            lo.setFrames = [v = wicked.get()](int n) { v->setSoftShadowFrames(n); };
-            lo.setFraming = [v = wicked.get()](double l, double t, double r, double b) { v->setFramingRect(l, t, r, b); };
-            viewport = std::move(wicked);
-        }
-    }
-#endif
-
-    const auto start0 = o.harnesses == "fresh" ? fakes::FakeAgentClient::Harnesses::Fresh
-                        : o.harnesses == "all"   ? fakes::FakeAgentClient::Harnesses::All
-                                                 : fakes::FakeAgentClient::Harnesses::Some;
-    fakes::FakeAgentClient agent(project.value(), false, start0);
-    model.setPreferredChoice(loadChoice());
-    ui::HarnessChoice savedChoice = model.preferredChoice();
-    agent.connect("fake://workbench");
-    EventBus bus;
 
     RInitDesc desc{};
     desc.backend = o.headless ? R_BACKEND_NULL : R_BACKEND_VULKAN;
@@ -324,110 +334,251 @@ int main(int argc, char** argv) {
         std::fprintf(stderr, "Rinit_ex failed\n");
         return 1;
     }
-    {
-        ui::WorkbenchView::Options vo;
-        vo.assets = o.assets;
-        vo.chatLeft = o.chatLeft;
-        ui::WorkbenchView view(model, &agent, bus, vo);
-        if (!view.build()) {
-            Rshutdown();
-            return 1;
-        }
-        std::unique_ptr<ui::LiveStage> live;
-        if (viewport) {
-            live = std::make_unique<ui::LiveStage>(*viewport, model, view, lo);
-            live->attach();
-        } else {
-            if (!view.stage().loadFile(o.stage)) std::fprintf(stderr, "cannot load stage image %s\n", o.stage.c_str());
-            // Pins for the stage image: where each anchored part lands in that frame.
-            const std::string sidecar = o.stage.substr(0, o.stage.find_last_of('.')) + ".json";
-            auto j = nlohmann::json::parse(slurp(sidecar), nullptr, false);
-            if (!j.is_discarded() && j.contains("pins"))
-                for (auto& [part, xy] : j["pins"].items())
-                    if (xy.is_array() && xy.size() == 2) view.setPinAnchor(PartId(part), xy[0].get<float>(), xy[1].get<float>());
-        }
-        // Simulate: the room and its physics, for the stage when it is live.
-        std::unique_ptr<ui::SimulateMode> sim;
-        if (viewport) {
-            namespace fs = std::filesystem;
-            auto setup = ui::parseSimSetup(slurp(o.simSetup), project.value());
-            if (!setup.ok()) {
-                std::fprintf(stderr, "simulate: %s: %s\n", o.simSetup.c_str(), setup.error().message.c_str());
-            } else {
-                ui::SimulateMode::Options so;
-                so.mjcf = slurp((fs::path(o.simSetup).parent_path() / setup->model).string());
-                so.fixedSeconds = o.simSeconds;
-#if defined(FULMETRY_HAS_MUJOCO)
-                std::unique_ptr<ISimulation> physics = sim::makeMujocoSimulation();
-                std::printf("simulate: MuJoCo\n");
-#else
-                std::unique_ptr<ISimulation> physics = std::make_unique<fakes::FakeSimulation>();
-                std::printf("simulate: kinematic fake (build with FULMETRY_WITH_MUJOCO for the physics)\n");
-#endif
-                sim = std::make_unique<ui::SimulateMode>(view, live.get(), *viewport, std::move(physics),
-                                                         std::move(setup.value()), so);
-                sim->attach();
-            }
-        }
-        if (o.width > 0 && o.height > 0) Rwindow_set_size(view.window(), o.width, o.height);
-        if (o.open == "tray") view.setTrayOpen(true);
-        if (o.open == "menu") view.setMenuOpen(true);
-        for (const auto& cmd : o.commands)
-            if (!view.harnessCommand(cmd)) std::fprintf(stderr, "harness command %s failed\n", cmd.c_str());
-        if (o.open == "onboard" || !o.onboard.empty()) view.setOnboardOpen(true, o.onboard);
-        if (o.open == "picker") view.setPickerOpen(true);
-        if (o.simulate) {
-            if (!sim) std::fprintf(stderr, "simulate: needs the live stage (a build with Wicked, without --still)\n");
-            else if (sim->start() && o.simDrive) sim->setDrive(DriveInput{o.simThrottle, o.simSteer});
-        }
-        std::printf("workbench ready: %s, %zu chat entries\n", model.project().name.c_str(), model.chat().size());
-        std::fflush(stdout);
 
-        const auto start = std::chrono::steady_clock::now();
-        int frame = 0;
-        bool orbited = o.orbitX == 0 && o.orbitY == 0 && o.zoom == 0 && o.hover.empty();
-        while (o.headless ? Rdraw_frame() : Rwait_frame(sim && sim->running() ? 1.0 / 120 : 0.05)) {
-            const double t = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
-            view.update(t);
-            if (sim) sim->update(t);
-            if (!(model.preferredChoice() == savedChoice)) {
-                savedChoice = model.preferredChoice();
-                saveChoice(savedChoice);
+    // The stage outlives the projects: the engine starts once, and each project is loaded into it.
+    std::unique_ptr<IViewport> viewport;
+    bool viewportTried = false;
+#if defined(FULMETRY_HAS_WICKED)
+    viewport::WickedViewport* wickedStage = nullptr;
+    viewport::WickedOptions wo;
+#endif
+    ui::LiveStage::Options lo;
+    lo.interactiveScale = o.interactiveScale;
+
+    // No --project: the home screen, over an empty workbench, until a project is made or opened there.
+    std::string next = o.project == "sample" ? o.sample : o.project;
+    bool first = true;
+    int status = 0;
+    std::vector<Harness> harnessState;  // what was installed and signed in, kept when another project opens
+    while (true) {
+        const bool home = next.empty();
+        const bool isSample = !home && std::filesystem::path(next) == std::filesystem::path(o.sample);
+        Project placeholder;
+        placeholder.name = "Fulmetry";
+        auto project = home ? Result<Project>(placeholder) : loadProject(next);
+        if (!project.ok()) {
+            std::fprintf(stderr, "cannot load %s: %s\n", next.c_str(), project.error().message.c_str());
+            if (first) {
+                status = 1;
+                break;
             }
-            if (live) {
-                live->update(t);
-                if (!orbited && live->settled()) {
-                    // A scripted drag in steps, as a mouse would send it: quick frames, then one resting render.
-                    for (int i = 0; i < 4; ++i) live->orbit(o.orbitX / 4, o.orbitY / 4);
-                    if (o.zoom != 0) live->zoom(o.zoom, 360, 450);
-                    if (!o.hover.empty()) live->hoverPart(PartId(o.hover));
-                    orbited = true;
+            next.clear();
+            continue;
+        }
+        if (!home) library.touch(next);
+        ui::WorkbenchModel model(project.value());
+        // The sample keeps its scripted chat; a project of yours keeps its own beside its file.
+        const std::string chatFile = isSample ? o.chat : home ? std::string() : ui::ProjectLibrary::chatPath(next);
+        if (!chatFile.empty() && std::filesystem::exists(chatFile))
+            if (auto st = model.loadChat(slurp(chatFile)); !st.ok())
+                std::fprintf(stderr, "chat %s: %s\n", chatFile.c_str(), st.error().message.c_str());
+        if (first) {
+            if (o.tab >= 0) model.selectTab(o.tab);
+            if (!o.select.empty() && !model.selectPart(PartId(o.select)))
+                std::fprintf(stderr, "no part %s\n", o.select.c_str());
+            model.setExploded(o.explode);
+            model.setXray(o.xray);
+        }
+
+        // The stage: the live render when this build has one, else the still image.
+#if defined(FULMETRY_HAS_WICKED)
+        if (!o.still && !viewportTried) {
+            viewportTried = true;
+            wo.assetRoot = home ? std::string() : std::filesystem::absolute(next).parent_path().string();
+            auto wicked = std::make_unique<viewport::WickedViewport>(wo);
+            // The engine starts on the first render: one small one tells whether this machine's GPU can run it.
+            Status st = wicked->loadProject(project.value());
+            if (st.ok())
+                if (auto probe = wicked->renderToImage(16, 16); !probe.ok()) st = probe.error();
+            if (!st.ok()) {
+                // No GPU the engine can use: the still stage, so the rest of the workbench still works.
+                std::printf("stage: still image, the live stage cannot start: %s\n", st.error().message.c_str());
+            } else {
+                lo.idleFrames = wo.frames;
+                lo.setFrames = [v = wicked.get()](int n) { v->setSoftShadowFrames(n); };
+                lo.setFraming = [v = wicked.get()](double l, double t, double r, double b) { v->setFramingRect(l, t, r, b); };
+                wickedStage = wicked.get();
+                viewport = std::move(wicked);
+            }
+        } else if (wickedStage) {
+            wickedStage->setAssetRoot(home ? std::string() : std::filesystem::absolute(next).parent_path().string());
+            if (auto st = wickedStage->loadProject(project.value()); !st.ok())
+                std::fprintf(stderr, "stage: %s\n", st.error().message.c_str());
+        }
+        if (wickedStage) {
+            for (const auto& w : wickedStage->meshWarnings()) std::fprintf(stderr, "stage: %s\n", w.c_str());
+            std::printf("stage: Wicked, %d parts drawn from meshes\n", wickedStage->meshFileCount());
+        }
+#endif
+        (void)viewportTried;
+
+        const auto start0 = o.harnesses == "fresh" ? fakes::FakeAgentClient::Harnesses::Fresh
+                            : o.harnesses == "all"   ? fakes::FakeAgentClient::Harnesses::All
+                                                     : fakes::FakeAgentClient::Harnesses::Some;
+        auto fakeAgent = std::make_unique<fakes::FakeAgentClient>(project.value(), false, start0);
+        if (!harnessState.empty()) fakeAgent->restoreHarnesses(harnessState);
+        fakes::FakeAgentClient* fake = fakeAgent.get();
+        std::unique_ptr<IAgentClient> agentOwned = std::move(fakeAgent);
+        if (o.cliAccounts) {
+            net::CliSignInOptions co;
+            co.onReadyChanged = [fake](const std::string& id, bool ready) { fake->setHarnessReady(id, ready); };
+            agentOwned = std::make_unique<net::CliSignInClient>(std::move(agentOwned), std::move(co));
+        }
+        IAgentClient& agent = *agentOwned;
+        model.setPreferredChoice(loadChoice());
+        ui::HarnessChoice savedChoice = model.preferredChoice();
+        agent.connect("fake://workbench");
+        EventBus bus;
+
+        Rid window = R_INVALID_ID;
+        bool switching = false;
+        {
+            ui::WorkbenchView::Options vo;
+            vo.assets = o.assets;
+            vo.chatLeft = o.chatLeft;
+            ui::WorkbenchView view(model, &agent, bus, vo);
+            if (!view.build()) {
+                status = 1;
+                break;
+            }
+            window = view.window();
+            std::unique_ptr<ui::LiveStage> live;
+            if (viewport) {
+                live = std::make_unique<ui::LiveStage>(*viewport, model, view, lo);
+                live->attach();
+            } else if (isSample) {
+                if (!view.stage().loadFile(o.stage)) std::fprintf(stderr, "cannot load stage image %s\n", o.stage.c_str());
+                // Pins for the stage image: where each anchored part lands in that frame.
+                const std::string sidecar = o.stage.substr(0, o.stage.find_last_of('.')) + ".json";
+                auto j = nlohmann::json::parse(slurp(sidecar), nullptr, false);
+                if (!j.is_discarded() && j.contains("pins"))
+                    for (auto& [part, xy] : j["pins"].items())
+                        if (xy.is_array() && xy.size() == 2) view.setPinAnchor(PartId(part), xy[0].get<float>(), xy[1].get<float>());
+            }
+            // Simulate: the room and its physics, for the stage when it is live. Only the sample has a room so far.
+            std::unique_ptr<ui::SimulateMode> sim;
+            if (viewport && isSample) {
+                namespace fs = std::filesystem;
+                auto setup = ui::parseSimSetup(slurp(o.simSetup), project.value());
+                if (!setup.ok()) {
+                    std::fprintf(stderr, "simulate: %s: %s\n", o.simSetup.c_str(), setup.error().message.c_str());
+                } else {
+                    ui::SimulateMode::Options so;
+                    so.mjcf = slurp((fs::path(o.simSetup).parent_path() / setup->model).string());
+                    so.fixedSeconds = o.simSeconds;
+#if defined(FULMETRY_HAS_MUJOCO)
+                    std::unique_ptr<ISimulation> physics = sim::makeMujocoSimulation();
+                    std::printf("simulate: MuJoCo\n");
+#else
+                    std::unique_ptr<ISimulation> physics = std::make_unique<fakes::FakeSimulation>();
+                    std::printf("simulate: kinematic fake (build with FULMETRY_WITH_MUJOCO for the physics)\n");
+#endif
+                    sim = std::make_unique<ui::SimulateMode>(view, live.get(), *viewport, std::move(physics),
+                                                             std::move(setup.value()), so);
+                    sim->attach();
                 }
             }
-            ++frame;
-            if (frame == 20) view.reportLayout();
-            // Screenshots and frame counts wait for the stage's resting render (at most 120 s).
-            const bool stageReady = !live || (live->settled() && orbited) || t > 120;
-            if (o.frames > 0 && frame >= o.frames && stageReady) break;
-            if (o.runSeconds > 0 && t >= o.runSeconds) break;
+
+            // Home: the projects of this machine and the sample; making or opening one switches to it.
+            view.setHomeLists({library.recent(), {{"Desk rover", o.sample, "A small two-wheeled rover with a camera head "
+                                                                           "and a wireless remote, with Simulate"}}});
+            view.setHomeClosable(!home);
+            view.setHomeHandlers(
+                [&](const std::string& idea) {
+                    auto made = library.createFromIdea(idea, clockNow());
+                    if (!made.ok()) {
+                        std::printf("create project: %s\n", made.error().message.c_str());
+                        return false;
+                    }
+                    std::printf("create project: %s\n", made.value().c_str());
+                    next = made.value();
+                    switching = true;
+                    return true;
+                },
+                [&](const std::string& path) {
+                    next = path;
+                    switching = true;
+                });
+
+            if (o.width > 0 && o.height > 0) Rwindow_set_size(view.window(), o.width, o.height);
+            if (home) view.setHomeOpen(true);
+            if (first) {
+                if (o.open == "tray") view.setTrayOpen(true);
+                if (o.open == "menu") view.setMenuOpen(true);
+                if (o.open == "home") view.setHomeOpen(true);
+                for (const auto& cmd : o.commands)
+                    if (cmd.rfind("create:", 0) == 0) view.post([&view, idea = cmd.substr(7)] { view.createProject(idea); });
+                    else if (!view.harnessCommand(cmd)) std::fprintf(stderr, "harness command %s failed\n", cmd.c_str());
+                if (o.open == "onboard" || !o.onboard.empty()) view.setOnboardOpen(true, o.onboard);
+                if (o.open == "picker") view.setPickerOpen(true);
+                if (o.simulate) {
+                    if (!sim) std::fprintf(stderr, "simulate: needs the live stage (a build with Wicked, without --still)\n");
+                    else if (sim->start() && o.simDrive) sim->setDrive(DriveInput{o.simThrottle, o.simSteer});
+                }
+            }
+            std::printf("workbench ready: %s, %zu chat entries\n", home ? "home" : model.project().name.c_str(),
+                        model.chat().size());
+            std::fflush(stdout);
+
+            const auto start = std::chrono::steady_clock::now();
+            int frame = 0;
+            bool orbited = !first || (o.orbitX == 0 && o.orbitY == 0 && o.zoom == 0 && o.hover.empty());
+            while (!switching && (o.headless ? Rdraw_frame() : Rwait_frame(sim && sim->running() ? 1.0 / 120 : 0.05))) {
+                const double t = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+                view.update(t);
+                if (sim) sim->update(t);
+                if (!(model.preferredChoice() == savedChoice)) {
+                    savedChoice = model.preferredChoice();
+                    saveChoice(savedChoice);
+                }
+                if (!onboarded && !model.needsOnboarding()) {
+                    onboarded = true;
+                    saveOnboarded();
+                }
+                if (live) {
+                    live->update(t);
+                    if (!orbited && live->settled()) {
+                        // A scripted drag in steps, as a mouse would send it: quick frames, then one resting render.
+                        for (int i = 0; i < 4; ++i) live->orbit(o.orbitX / 4, o.orbitY / 4);
+                        if (o.zoom != 0) live->zoom(o.zoom, 360, 450);
+                        if (!o.hover.empty()) live->hoverPart(PartId(o.hover));
+                        orbited = true;
+                    }
+                }
+                ++frame;
+                if (frame == 20) view.reportLayout();
+                // Screenshots and frame counts wait for the stage's resting render (at most 120 s).
+                const bool stageReady = !live || (live->settled() && orbited) || t > 120;
+                if (o.frames > 0 && frame >= o.frames && stageReady) break;
+                if (o.runSeconds > 0 && t >= o.runSeconds) break;
+            }
+            if (!switching) {
+                if (sim && sim->running()) {
+                    const auto& d = sim->drive();
+                    std::printf("simulate: t %.2f s, %.2f m, at %.0f %.0f mm, speed %.2f m/s, on %s, battery %.2f%%\n",
+                                d.time(), d.distanceM(), d.position().x, d.position().y, d.speed(), d.surface().c_str(),
+                                d.batteryPct());
+                    for (const auto& f : d.findings())
+                        std::printf("finding %s (%s): %s\n", f.id.c_str(), f.good ? "good" : "bad", f.text.c_str());
+                }
+                if (live)
+                    std::printf("stage frame times: quick %.0f ms, resting %.0f ms\n", live->interactiveMs(), live->idleMs());
+                if (!o.shot.empty()) {
+                    if (saveShot(view.window(), o.shot)) std::printf("screenshot: %s\n", o.shot.c_str());
+                    else std::fprintf(stderr, "screenshot failed (backend cannot capture)\n");
+                }
+                std::printf("new agents run on: %s/%s\n", model.choice().harness.c_str(), model.choice().model.c_str());
+                std::printf("frames: %d, raven reports: %d, chat entries: %zu, selection: %s\n", frame, g_reports,
+                            model.chat().size(), model.selectedPart() ? model.selectedPart()->value.c_str() : "none");
+            }
         }
-        if (sim && sim->running()) {
-            const auto& d = sim->drive();
-            std::printf("simulate: t %.2f s, %.2f m, at %.0f %.0f mm, speed %.2f m/s, on %s, battery %.2f%%\n", d.time(),
-                        d.distanceM(), d.position().x, d.position().y, d.speed(), d.surface().c_str(), d.batteryPct());
-            for (const auto& f : d.findings())
-                std::printf("finding %s (%s): %s\n", f.id.c_str(), f.good ? "good" : "bad", f.text.c_str());
-        }
-        if (live)
-            std::printf("stage frame times: quick %.0f ms, resting %.0f ms\n", live->interactiveMs(), live->idleMs());
-        if (!o.shot.empty()) {
-            if (saveShot(view.window(), o.shot)) std::printf("screenshot: %s\n", o.shot.c_str());
-            else std::fprintf(stderr, "screenshot failed (backend cannot capture)\n");
-        }
-        std::printf("new agents run on: %s/%s\n", model.choice().harness.c_str(), model.choice().model.c_str());
-        std::printf("frames: %d, raven reports: %d, chat entries: %zu, selection: %s\n", frame, g_reports,
-                    model.chat().size(), model.selectedPart() ? model.selectedPart()->value.c_str() : "none");
+        if (!(model.preferredChoice() == savedChoice)) saveChoice(model.preferredChoice());
+        harnessState = agent.harnesses();
+        if (!switching) break;
+        // The next project gets a window of its own.
+        Rwindow_destroy(window);
+        first = false;
     }
     Rshutdown();
-    return o.strict && g_reports > 0 ? 2 : 0;
+    return status != 0 ? status : o.strict && g_reports > 0 ? 2 : 0;
 }

@@ -23,6 +23,9 @@ public:
         harnesses_ = catalog(harnesses);
     }
 
+    // Carries harness state (installed, signed in) over from another client, as one T3 Code server would keep it.
+    void restoreHarnesses(std::vector<Harness> harnesses) { harnesses_ = std::move(harnesses); }
+
     Status connect(const std::string& url) override {
         if (url.rfind("ws://", 0) != 0 && url.rfind("fake://", 0) != 0) return Error{"bad_url", url};
         connected_ = true;
@@ -187,6 +190,15 @@ public:
         if (h->status == HarnessStatus::Ready) h->status = HarnessStatus::NeedsSignIn;
         harnessesChanged_ = true;
         return Ok{};
+    }
+
+    // Follows a sign-in made elsewhere (CliSignInClient in the app): agents run on the harness only while ready.
+    void setHarnessReady(const std::string& id, bool ready) {
+        Harness* h = harness(id);
+        if (!h || h->status == HarnessStatus::Disabled) return;
+        h->setup = {};
+        h->status = ready ? HarnessStatus::Ready : HarnessStatus::NeedsSignIn;
+        harnessesChanged_ = true;
     }
 
     Status setHarnessEnabled(const std::string& id, bool enabled) override {

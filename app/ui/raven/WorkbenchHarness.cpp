@@ -310,7 +310,7 @@ void WorkbenchView::buildOnboard() {
     const bool ready = !model_.needsOnboarding();
     Rwidget_set_visibility(find("onboard.close"), ready ? R_VISIBLE : R_HIDDEN);
     setBackground(find("onboard.done"), ready ? kAccent : 0xC9CED4);
-    setText(find("onboard.done.label"), !ready ? "Connect a harness to continue" : onboardAuto_ ? "Open the workbench" : "Done");
+    setText(find("onboard.done.label"), !ready ? "Connect a harness to continue" : onboardAuto_ ? (homeOpen_ ? "Continue" : "Open the workbench") : "Done");
     setBackground(find("onboard.scrim"), 0xE9EDF1, 1);
 
     Rid list = find("onboard.list");
@@ -528,6 +528,23 @@ void WorkbenchView::onboardSetup(Rid body, const Harness& h) {
         outline(box, kLine);
         Rid col = vbox(box, 14);
         Rid acts = R_INVALID_ID;
+        auto fields = [&](Rid parent) {
+            for (const auto& f : st.fields) {
+                Rid fcol = vbox(parent, 6);
+                label(fcol, f.label, fonts_.semibold, 12.5f, kInk);
+                Rid frame = border(fcol, kHud2, 1, 4, 10, 7);
+                outline(frame, kLine);
+                Rid input = Rwidget_add_child(frame, Rwidget_create(R_WIDGET_TEXT_INPUT));
+                Rwidget_set_class(input, "composer");
+                Rwidget_set_font(input, fonts_.mono);
+                Rwidget_set_metric(input, R_METRIC_FONT_SIZE, 13);
+                Rtext_input_set_password(input, f.secret ? 1 : 0);
+                Rtext_input_set_placeholder(input, f.name.c_str());
+                if (auto it = credentialDraft_.find(f.name); it != credentialDraft_.end())
+                    Rtext_input_set_text(input, it->second.c_str());
+                credentialInputs_[f.name] = input;
+            }
+        };
         switch (st.prompt) {
             case P::DeviceCode: {
                 eyebrow(col, "Enter this code", 11);
@@ -560,26 +577,20 @@ void WorkbenchView::onboardSetup(Rid body, const Harness& h) {
                           fonts_.regular, 13.5f, kBody);
                 label(col, st.url.size() > 64 ? st.url.substr(0, 64) + "\xE2\x80\xA6" : st.url, fonts_.mono, 11.5f, kMute);
                 acts = hbox(col, 8);
-                button(acts, "Open sign-in page", true, [url = st.url] { Ropen_url(url.c_str()); }, "external");
-                button(acts, "I've signed in", false, [this, id] { harnessCommand("answer:" + id); });
+                button(acts, "Open sign-in page", !st.fields.empty() ? false : true,
+                       [url = st.url] { Ropen_url(url.c_str()); }, "external");
+                if (st.fields.empty()) {
+                    button(acts, "I've signed in", false, [this, id] { harnessCommand("answer:" + id); });
+                } else {
+                    // a pasted code finishes the sign-in when the browser could not hand it back by itself
+                    fields(col);
+                    acts = hbox(col, 8);
+                    button(acts, "Submit code", true, [this, id] { harnessCommand("answer:" + id); });
+                }
                 break;
             }
             case P::Credentials: {
-                for (const auto& f : st.fields) {
-                    Rid fcol = vbox(col, 6);
-                    label(fcol, f.label, fonts_.semibold, 12.5f, kInk);
-                    Rid frame = border(fcol, kHud2, 1, 4, 10, 7);
-                    outline(frame, kLine);
-                    Rid input = Rwidget_add_child(frame, Rwidget_create(R_WIDGET_TEXT_INPUT));
-                    Rwidget_set_class(input, "composer");
-                    Rwidget_set_font(input, fonts_.mono);
-                    Rwidget_set_metric(input, R_METRIC_FONT_SIZE, 13);
-                    Rtext_input_set_password(input, f.secret ? 1 : 0);
-                    Rtext_input_set_placeholder(input, f.name.c_str());
-                    if (auto it = credentialDraft_.find(f.name); it != credentialDraft_.end())
-                        Rtext_input_set_text(input, it->second.c_str());
-                    credentialInputs_[f.name] = input;
-                }
+                fields(col);
                 if (!st.message.empty()) wrapLabel(col, st.message, fonts_.regular, 12.5f, kMute);
                 acts = hbox(col, 8);
                 button(acts, "Save and check", true, [this, id] { harnessCommand("answer:" + id); });

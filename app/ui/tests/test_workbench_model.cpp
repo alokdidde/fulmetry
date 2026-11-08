@@ -1,11 +1,14 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include <doctest/doctest.h>
 
+#include <chrono>
+#include <filesystem>
 #include <fstream>
 #include <sstream>
 
 #include "fakes/FakeAgentClient.h"
 #include "fulmetry/project/ProjectIO.h"
+#include "fulmetry/ui/ProjectLibrary.h"
 #include "fulmetry/ui/WorkbenchModel.h"
 
 using namespace fulmetry;
@@ -239,4 +242,47 @@ TEST_CASE("drive test: the scripted drive moves the rover's parts on the stage a
     CHECK_FALSE(vp.environment().has_value());
     CHECK(vp.drawnPlacement(chassis) == chassis0);
     CHECK_FALSE(parseSimSetup("{\"model\":\"x\",\"object\":\"obj:nope\",\"bodies\":{}}", p).ok());
+}
+
+TEST_CASE("a project starts from an idea, named after it, and opens from the recent list") {
+    namespace fs = std::filesystem;
+    const fs::path tmp = fs::temp_directory_path() / ("fulmetry-library-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+    fs::remove_all(tmp);
+    ProjectLibrary library((tmp / "projects").string(), (tmp / "settings.json").string());
+
+    CHECK(ProjectLibrary::nameFromIdea("a plant watering robot that waters my basil when the soil is dry") ==
+          "Plant watering robot");
+    CHECK(ProjectLibrary::nameFromIdea("Build a desk lamp, with a dimmer") == "Desk lamp");
+    CHECK(ProjectLibrary::nameFromIdea("   ") == "New project");
+    CHECK_FALSE(library.createFromIdea("  ", "10:00").ok());
+
+    auto first = library.createFromIdea("a plant watering robot that waters my basil", "10:00");
+    REQUIRE(first.ok());
+    auto project = loadProject(first.value());
+    REQUIRE(project.ok());
+    CHECK(project->name == "Plant watering robot");
+    REQUIRE(project->objects.size() == 1);
+    CHECK(project->objects[0].parts.empty());
+
+    // The idea is the chat's first message, which the workbench loads.
+    WorkbenchModel model(project.value());
+    REQUIRE(model.loadChat(slurp(ProjectLibrary::chatPath(first.value()))).ok());
+    REQUIRE(model.chat().size() == 1);
+    CHECK(model.chat()[0].text == "a plant watering robot that waters my basil");
+
+    // The same idea again gets its own folder; the newest is first in the recent list.
+    auto second = library.createFromIdea("A plant watering robot", "10:01");
+    REQUIRE(second.ok());
+    CHECK(fs::path(second.value()).parent_path() != fs::path(first.value()).parent_path());
+    auto recent = library.recent();
+    REQUIRE(recent.size() == 2);
+    CHECK(recent[0].path == second.value());
+    CHECK(recent[1].detail == "Empty: started from an idea");
+
+    // A project opened again moves to the top; one that no longer loads drops out.
+    library.touch(first.value());
+    CHECK(library.recent()[0].path == first.value());
+    fs::remove_all(fs::path(second.value()).parent_path());
+    CHECK(library.recent().size() == 1);
+    fs::remove_all(tmp);
 }

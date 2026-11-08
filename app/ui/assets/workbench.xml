@@ -157,6 +157,48 @@
 		<VBox Name="picker.body" Spacing="0"/>
 	</Panel>
 
+	<!-- ===================================================== home: start a project from an idea, or open one -->
+	<Overlay Name="home" Visibility="Collapsed">
+		<Border Name="home.scrim" Background="#F3F5F7"/>
+		<Border Name="home.card" Background="#FFFFFF" BorderColor="#E1E5EA" BorderWidth="1" CornerRadius="4" Shadow="48,0,14"
+			Width="880" Height="720" Clip="true" Slot.HAlign="Center" Slot.VAlign="Center">
+			<VBox Spacing="0">
+				<HBox Spacing="10" Slot.Padding="32,24,24,0">
+					<Image Source="icons/mark.svg" Slot.VAlign="Center"/>
+					<Label Font="fonts/InterTight-Bold.ttf" TextSize="19" Color="#14171A" Slot.VAlign="Center" Slot.Fill="1">FULMETRY</Label>
+					<Border Name="home.close" Background="#F3F5F7" CornerRadius="3" Padding="8" Cursor="Hand" Slot.VAlign="Center">
+						<Image Source="icons/close.svg"/>
+					</Border>
+				</HBox>
+				<VBox Spacing="6" Slot.Padding="32,26,32,0">
+					<Eyebrow>NEW PROJECT</Eyebrow>
+					<Label Font="fonts/InterTight-Bold.ttf" TextSize="28" Color="#14171A">What do you want to make?</Label>
+				</VBox>
+				<Border Background="#F3F5F7" BorderColor="#E1E5EA" BorderWidth="1" CornerRadius="6" Padding="12,7,6,7" Slot.Padding="32,16,32,0">
+					<HBox Spacing="8">
+						<TextInput Name="home.idea" Class="composer" Placeholder="A robot that waters my plants when the soil gets dry" Slot.Fill="1" Slot.VAlign="Center"/>
+						<Border Name="home.create" Background="#E5322D" CornerRadius="3" Padding="16,8" Cursor="Hand">
+							<Label Font="fonts/Inter-SemiBold.ttf" TextSize="13" Color="#FFFFFF">Create project</Label>
+						</Border>
+					</HBox>
+				</Border>
+				<Label Name="home.note" TextSize="12.5" Color="#66707B" Slot.Padding="34,10,32,0"/>
+				<ScrollBox Name="home.scroll" Slot.Fill="1" Slot.Padding="0,18,0,0">
+					<VBox Name="home.lists" Spacing="8" Slot.Padding="32,0,32,24"/>
+				</ScrollBox>
+				<Rule Vertical="false"/>
+				<HBox Spacing="10" Slot.Padding="32,14,24,14">
+					<Label TextSize="12.5" Color="#66707B" Slot.VAlign="Center">Coding agent</Label>
+					<Border Name="home.harness.dot" Width="8" Height="8" CornerRadius="4" Background="#66707B" Slot.VAlign="Center"/>
+					<Label Name="home.harness" Font="fonts/Inter-SemiBold.ttf" TextSize="13" Color="#14171A" Slot.VAlign="Center" Slot.Fill="1"/>
+					<Border Name="home.agents" Background="#F3F5F7" BorderColor="#E1E5EA" BorderWidth="1" CornerRadius="3" Padding="14,8" Cursor="Hand">
+						<Label Font="fonts/Inter-SemiBold.ttf" TextSize="13" Color="#14171A">Manage coding agents</Label>
+					</Border>
+				</HBox>
+			</VBox>
+		</Border>
+	</Overlay>
+
 	<!-- ===================================================== onboarding: connect harnesses -->
 	<Overlay Name="onboard" Visibility="Collapsed">
 		<Border Name="onboard.scrim" Background="#E9EDF1"/>

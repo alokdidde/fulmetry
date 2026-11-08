@@ -26,7 +26,7 @@ shrink() {  # keep each screenshot well under 300 KB
 
 shot() {  # shot <name> [workbench args...]
   local name=$1; shift
-  "$BIN" --frames 40 --strict --shot "$OUT/$name.png" "$@" >"$LOGS/$name.log" 2>&1 || { cat "$LOGS/$name.log"; exit 1; }
+  "$BIN" --project sample --harnesses some --frames 40 --strict --shot "$OUT/$name.png" "$@" >"$LOGS/$name.log" 2>&1 || { cat "$LOGS/$name.log"; exit 1; }
   shrink "$OUT/$name.png"
   echo "$name.png: $(stat -c %s "$OUT/$name.png") bytes"
 }
@@ -38,7 +38,7 @@ shot chat-left --chat-left
 
 # ---- interaction: real X11 clicks and keys (positions come from the app's own layout report)
 LOG="$LOGS/interaction.log"
-"$BIN" --run-seconds 25 >"$LOG" 2>&1 &
+"$BIN" --project sample --harnesses some --run-seconds 25 >"$LOG" 2>&1 &
 APP=$!
 for _ in $(seq 1 150); do grep -q "^send-at" "$LOG" && break; sleep 0.2; done
 sleep 1

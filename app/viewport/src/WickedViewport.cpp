@@ -719,6 +719,7 @@ Status WickedViewport::loadProject(const Project& project) {
     resetView();
     return Ok{};
 }
+void WickedViewport::setAssetRoot(const std::string& root) { impl_->options.assetRoot = root; }
 void WickedViewport::showObject(const std::optional<ObjectId>& object) { impl_->object = object; }
 void WickedViewport::setSelected(const std::optional<PartId>& part) { impl_->selected = part; }
 void WickedViewport::setHovered(const std::optional<PartId>& part) { impl_->hovered = part; }

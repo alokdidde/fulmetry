@@ -72,24 +72,89 @@ jobs:
         run: cmake --build --preset release
       - name: GPU
         run: system_profiler SPDisplaysDataType | head -20
+      - name: Metal shaders compile
+        # The live stage compiles Wicked's shaders for Metal on first launch. The runner's GPU can't run them, but the
+        # compiler (DXC, then the Metal shader converter) runs on the CPU, so compile all of them here and ship them
+        # in the app (tools/package/macos.sh): the app then never compiles shaders on the user's Mac.
+        run: |
+          w="$WICKED_ROOT/WickedEngine"
+          out="$GITHUB_WORKSPACE/build/release/metal-shaders"
+          mkdir -p "$out"
+          cp "$w/libdxcompiler.dylib" "$w/libmetalirconverter.dylib" "$out/"
+          clang++ -std=gnu++20 -O1 -w -DJPH_DEBUG_RENDERER -I"$w" -I"$w/Utility/metal" "$w/offlineshadercompiler.cpp" \
+            build/release/app/viewport/wicked/xcode/Build/Products/Release/libWickedEngine_MacOS.a \
+            -framework Metal -framework MetalKit -framework MetalFX -framework QuartzCore -framework Foundation \
+            -framework AppKit -framework GameController -framework IOKit -framework CoreHaptics -framework AudioToolbox \
+            -framework CoreAudio -framework AVFoundation -framework UniformTypeIdentifiers -o "$out/offlineshadercompiler"
+          cd "$out"
+          ./offlineshadercompiler metal > compile.log 2>&1 || { grep -iE "error|fail" compile.log | head -80; exit 1; }
+          tail -3 compile.log
+          n=$(find shaders/metal -name "*.cso" | wc -l | tr -d " ")
+          echo "compiled $n Metal shaders"
+          test "$n" -ge 300
       - name: Smoke run (null window)
         timeout-minutes: 25
         # The UI runs on Raven's null backend. Wicked's Metal backend needs Metal 4, which the hosted runners' virtual
         # GPU lacks, so here the app takes its still-stage fallback; on a Metal 4 Mac the live stage and Simulate run.
         run: |
-          build/release/app/ui/fulmetry_workbench --headless --strict --frames 30 --simulate --sim-seconds 3 | tee smoke.log
+          build/release/app/ui/fulmetry_workbench --headless --strict --project sample --frames 30 --simulate --sim-seconds 3 | tee smoke.log
           grep -q "workbench ready" smoke.log
           grep -Eq "stage: (Wicked|still image)" smoke.log
           if grep -q "stage: Wicked" smoke.log; then grep -q "simulate: t 3.00 s" smoke.log; fi
+      - name: Signing certificate
+        # Developer ID signing and notarization run once the MACOS_CERT_* and NOTARY_* secrets exist (an Apple Developer
+        # Program account). Without them, or on a pull request, the app is signed ad hoc and Gatekeeper warns on first open.
+        id: sign
+        if: github.event_name != 'pull_request'
+        env:
+          CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
+          CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+        run: |
+          if [ -z "$CERT_P12" ]; then echo "no MACOS_CERT_P12 secret: signing ad hoc"; exit 0; fi
+          kc="$RUNNER_TEMP/sign.keychain-db"
+          kp=$(uuidgen)
+          echo "$CERT_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security create-keychain -p "$kp" "$kc"
+          security set-keychain-settings -lut 21600 "$kc"
+          security unlock-keychain -p "$kp" "$kc"
+          security import "$RUNNER_TEMP/cert.p12" -k "$kc" -P "$CERT_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$kp" "$kc" >/dev/null
+          security list-keychains -d user -s "$kc" $(security list-keychains -d user | tr -d '"')
+          rm "$RUNNER_TEMP/cert.p12"
+          id=$(security find-identity -v -p codesigning "$kc" | grep -o '"Developer ID Application: [^"]*"' | head -1 | tr -d '"')
+          test -n "$id" || { echo "the certificate is not a Developer ID Application certificate" >&2; exit 1; }
+          echo "identity=$id" >> "$GITHUB_OUTPUT"
       - name: Package
+        env:
+          MACOS_SIGN_IDENTITY: ${{ steps.sign.outputs.identity }}
         run: tools/package/macos.sh build/release dist "${{ steps.v.outputs.version }}"
+      - name: Notarize
+        if: steps.sign.outputs.identity != ''
+        env:
+          KEY_P8: ${{ secrets.NOTARY_KEY_P8 }}
+          KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
+          ISSUER: ${{ secrets.NOTARY_ISSUER_ID }}
+        run: |
+          echo "$KEY_P8" | base64 --decode > "$RUNNER_TEMP/notary.p8"
+          zip=$(ls dist/*.zip)
+          xcrun notarytool submit "$zip" --key "$RUNNER_TEMP/notary.p8" --key-id "$KEY_ID" --issuer "$ISSUER" \
+            --wait --timeout 30m --output-format json | tee notary.json
+          grep -q '"status" *: *"Accepted"' notary.json || {
+            xcrun notarytool log "$(python3 -c 'import json;print(json.load(open("notary.json"))["id"])')" \
+              --key "$RUNNER_TEMP/notary.p8" --key-id "$KEY_ID" --issuer "$ISSUER"; exit 1; }
+          rm "$RUNNER_TEMP/notary.p8"
+          # Staple the ticket so the first open works offline, then zip the stapled app again.
+          xcrun stapler staple dist/Fulmetry.app
+          spctl --assess --type execute -vv dist/Fulmetry.app
+          rm "$zip"
+          ditto -c -k --sequesterRsrc --keepParent dist/Fulmetry.app "$zip"
       - name: Screenshot of the packaged app
         # A real window through MoltenVK on the runner's desktop. Best effort: some runners have no display.
         continue-on-error: true
         run: |
           mkdir -p shots
-          dist/Fulmetry.app/Contents/MacOS/Fulmetry --frames 40 --strict --shot "$PWD/shots/macos-app.png"
-          dist/Fulmetry.app/Contents/MacOS/Fulmetry --frames 40 --strict --simulate --sim-seconds 7.3 \
+          dist/Fulmetry.app/Contents/MacOS/Fulmetry --project sample --frames 40 --strict --shot "$PWD/shots/macos-app.png"
+          dist/Fulmetry.app/Contents/MacOS/Fulmetry --project sample --frames 40 --strict --simulate --sim-seconds 7.3 \
             --shot "$PWD/shots/macos-simulate.png"
       - uses: actions/upload-artifact@v4
         with:
@@ -151,7 +216,7 @@ jobs:
       - name: Smoke run of the package
         run: |
           tar -C "$RUNNER_TEMP" -xzf dist/*.tar.gz
-          "$RUNNER_TEMP"/fulmetry-*/fulmetry --headless --strict --frames 30 --simulate --sim-seconds 3 | tee smoke.log
+          "$RUNNER_TEMP"/fulmetry-*/fulmetry --headless --strict --project sample --frames 30 --simulate --sim-seconds 3 | tee smoke.log
           grep -q "stage: Wicked" smoke.log
           grep -q "simulate: t 3.00 s" smoke.log
       - uses: actions/upload-artifact@v4
