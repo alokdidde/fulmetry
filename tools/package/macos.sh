@@ -3,8 +3,10 @@
 #   tools/package/macos.sh <build dir> <out dir> <version>
 # Needs WICKED_ROOT and MUJOCO_ROOT (tools/fetch_dep.py), and MoltenVK (brew install molten-vk).
 # The bundle: Contents/MacOS (the app, Wicked's shader compilers), Contents/Frameworks (mujoco.framework,
-# libMoltenVK.dylib), Contents/Resources (UI assets, the rover project, Wicked's shader sources and compiled Metal shaders). Signed ad hoc:
-# not notarized, so the first open needs right-click > Open (or xattr -dr com.apple.quarantine).
+# libMoltenVK.dylib), Contents/Resources (UI assets, the rover project, Wicked's shader sources and compiled Metal shaders).
+# With MACOS_SIGN_IDENTITY ("Developer ID Application: ...") in the keychain it is signed for notarization (hardened
+# runtime, timestamp); release.yml then notarizes and staples it. Without it, it is signed ad hoc and the first open
+# needs Open Anyway in System Settings (or xattr -dr com.apple.quarantine).
 set -euo pipefail
 BUILD=${1:?build dir}
 OUT=${2:?out dir}
@@ -58,8 +60,18 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 </plist>
 PLIST
 
-codesign --force --deep --sign - "$APP"
-codesign --verify --deep "$APP"
+if [ -n "${MACOS_SIGN_IDENTITY:-}" ]; then
+  # Inside out: notarization rejects --deep and needs every Mach-O signed with the hardened runtime.
+  ENT=$ROOT/tools/package/macos.entitlements
+  sign() { codesign --force --timestamp --options runtime --sign "$MACOS_SIGN_IDENTITY" "$@"; }
+  sign "$APP"/Contents/MacOS/*.dylib "$APP/Contents/Frameworks/libMoltenVK.dylib"
+  sign "$APP/Contents/Frameworks/mujoco.framework"
+  sign --entitlements "$ENT" "$APP"
+  codesign --verify --strict --deep "$APP"
+else
+  codesign --force --deep --sign - "$APP"
+  codesign --verify --deep "$APP"
+fi
 ZIP=$OUT/Fulmetry-${VERSION}-macos-arm64.zip
 rm -f "$ZIP"
 ditto -c -k --sequesterRsrc --keepParent "$APP" "$ZIP"
